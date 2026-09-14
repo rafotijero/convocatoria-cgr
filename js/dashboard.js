@@ -65,6 +65,7 @@
     exp: '', sinEsp: false, sinPub: false, sinCol: false, sort: 'codigo', perPage: 12, page: 1,
   };
   let ambitoExpanded = false;
+  let vista = 'buscar'; // 'buscar' | 'general'
   let current = []; // lista filtrada y ordenada
 
   /* ---------- Controles ---------- */
@@ -74,7 +75,10 @@
     sinEsp: $('#f-sinesp'), sinPub: $('#f-sinpub'), sinCol: $('#f-sincol'),
     sort: $('#sort'), perPage: $('#per-page'), tiles: $('#tiles'), count: $('#count'),
     pills: $('#active-filters'), pager: $('#pager'), chartEscala: $('#chart-escala'),
-    chartAmbito: $('#chart-ambito'), ambitoMore: $('#chart-ambito-more'), filters: $('#filters'),
+    chartAmbito: $('#chart-ambito'), ambitoMore: $('#chart-ambito-more'),
+    panel: $('#filter-panel'), summary: $('#filter-summary'), summaryText: $('#filter-summary-text'),
+    editBtn: $('#edit-filters'), applyBtn: $('#apply-filters'), liveCount: $('#live-count'),
+    generalNote: $('#general-note'), generalNoteText: $('#general-note-text'),
   };
 
   const option = (v, label) => `<option value="${esc(v)}">${esc(label || v)}</option>`;
@@ -118,6 +122,7 @@
     state.sort = u.get('orden') || 'codigo';
     state.perPage = [12, 24, 48].includes(+u.get('pp')) ? +u.get('pp') : 12;
     state.page = Math.max(1, +u.get('pag') || 1);
+    vista = u.get('vista') === 'general' ? 'general' : 'buscar';
     return u.get('perfil');
   }
 
@@ -133,6 +138,7 @@
     if (state.sort !== 'codigo') u.set('orden', state.sort);
     if (state.perPage !== 12) u.set('pp', state.perPage);
     if (state.page > 1) u.set('pag', state.page);
+    if (vista === 'general') u.set('vista', 'general');
     if (perfilId) u.set('perfil', perfilId);
     const qs = u.toString();
     try { history.replaceState(null, '', qs ? `?${qs}` : location.pathname); } catch (e) { /* file:// en algunos navegadores */ }
@@ -280,7 +286,16 @@
     if (state.sinCol) add('Sin colegiatura', () => { state.sinCol = false; });
     el.pills.innerHTML = pills.map((p, i) => `<button type="button" class="pill" data-pill="${i}" aria-label="Quitar filtro ${esc(p.label)}"><span>${esc(p.label)}</span>${ICON.x}</button>`).join('');
     el.pills._pills = pills;
-    el.count.textContent = current.length === 1 ? '1 perfil encontrado' : `${fmt(current.length)} perfiles encontrados`;
+
+    const n = current.length;
+    const encontrados = n === 1 ? '1 perfil encontrado' : `${fmt(n)} perfiles encontrados`;
+    const aplicados = pills.length === 1 ? '1 filtro aplicado' : `${pills.length} filtros aplicados`;
+    el.count.textContent = encontrados;
+    el.liveCount.innerHTML = `<strong>${fmt(n)}</strong> ${n === 1 ? 'perfil coincide' : 'perfiles coinciden'}`;
+    el.applyBtn.textContent = n === 1 ? 'Aceptar · ver 1 perfil' : `Aceptar · ver ${fmt(n)} perfiles`;
+    el.summaryText.textContent = pills.length ? `${aplicados} · ${encontrados}` : `Sin filtros · se muestran los ${fmt(perfiles.length)} perfiles`;
+    el.generalNote.hidden = !pills.length;
+    el.generalNoteText.textContent = `Las cifras corresponden a ${aplicados}.`;
   }
 
   function carrerasCorto(p) {
@@ -516,9 +531,11 @@
     const b = e.target.closest('[data-escala]');
     if (!b) return;
     const c = b.dataset.escala;
-    if (state.escalas.has(c)) state.escalas.delete(c); else state.escalas.add(c);
+    const agregar = !state.escalas.has(c);
+    if (agregar) state.escalas.add(c); else state.escalas.delete(c);
     syncControls();
     update();
+    if (agregar) goToResults();
   });
   el.chartAmbito.addEventListener('click', (e) => {
     const b = e.target.closest('[data-ambito]');
@@ -526,6 +543,7 @@
     state.ambito = state.ambito === b.dataset.ambito ? '' : b.dataset.ambito;
     syncControls();
     update();
+    if (state.ambito) goToResults();
   });
   el.ambitoMore.addEventListener('click', () => { ambitoExpanded = !ambitoExpanded; renderCharts(); });
 
@@ -555,27 +573,62 @@
     $('.results-bar').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  // Filtros como panel lateral en pantallas pequeñas
-  let scrim = null;
-  function toggleFilters(open) {
-    el.filters.classList.toggle('is-open', open);
-    if (open && !scrim) {
-      scrim = document.createElement('div');
-      scrim.className = 'scrim';
-      scrim.addEventListener('click', () => toggleFilters(false));
-      document.body.appendChild(scrim);
-    } else if (!open && scrim) {
-      scrim.remove();
-      scrim = null;
-    }
+  /* ---------- Vistas (pestañas) y panel de filtros ---------- */
+  const viewTabs = $$('[data-view]');
+  function setView(v, focus = false) {
+    vista = v === 'general' ? 'general' : 'buscar';
+    viewTabs.forEach((t) => {
+      const on = t.dataset.view === vista;
+      t.setAttribute('aria-selected', String(on));
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      if (on && focus) t.focus();
+    });
+    writeUrl(dId);
   }
-  $('#open-filters').addEventListener('click', () => toggleFilters(true));
-  $('#close-filters').addEventListener('click', () => toggleFilters(false));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && scrim) toggleFilters(false); });
+  viewTabs.forEach((t) => t.addEventListener('click', () => setView(t.dataset.view)));
+  $('.page-tabs').addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') setView(vista === 'buscar' ? 'general' : 'buscar', true);
+  });
+
+  // Al aceptar se ocultan los filtros y queda visible un resumen con lo aplicado.
+  function setFiltersOpen(open) {
+    el.panel.hidden = !open;
+    el.summary.hidden = open;
+    el.editBtn.setAttribute('aria-expanded', String(open));
+  }
+  function goToResults() {
+    setView('buscar');
+    setFiltersOpen(false);
+    el.summary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function flushTextFilters() {
+    clearTimeout(tq);
+    state.q = el.q.value.trim();
+    state.lugar = el.lugar.value.trim();
+    state.carrera = el.carrera.value.trim();
+    update();
+  }
+  el.applyBtn.addEventListener('click', () => { flushTextFilters(); goToResults(); });
+  el.editBtn.addEventListener('click', () => {
+    setFiltersOpen(true);
+    el.panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  el.panel.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.matches('input.input')) {
+      e.preventDefault();
+      flushTextFilters();
+      goToResults();
+    }
+  });
+  $('#clear-general').addEventListener('click', clearAll);
 
   /* ---------- Inicio ---------- */
   const perfilInicial = readUrl();
   syncControls();
   render();
+  // Un enlace que ya trae filtros abre directamente los resultados con el resumen visible.
+  setFiltersOpen(!el.pills._pills.length);
+  setView(vista);
   if (perfilInicial && perfiles.some((p) => p.id === perfilInicial)) openDetail(perfilInicial);
 })();

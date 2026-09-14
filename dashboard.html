@@ -29,143 +29,175 @@
 
 <main class="container">
   <div class="dash-head">
-    <div>
-      <h1>Perfiles y posiciones</h1>
-      <p>Filtra los perfiles por lugar de prestación, órgano, escala remunerativa y requisitos. Abre cualquiera para ver su detalle.</p>
+    <h1>Perfiles y posiciones</h1>
+    <div class="page-tabs" role="tablist" aria-label="Vistas de perfiles">
+      <button type="button" class="page-tab" role="tab" id="tab-buscar" data-view="buscar" aria-controls="view-buscar" aria-selected="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+        Filtrar perfiles
+      </button>
+      <button type="button" class="page-tab" role="tab" id="tab-general" data-view="general" aria-controls="view-general" aria-selected="false" tabindex="-1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15v2M11 11v6M15 7v10M19 13v4"/></svg>
+        Información general
+      </button>
     </div>
   </div>
 
-  <div class="dash">
-    <!-- ============ FILTROS ============ -->
-    <aside class="card filters" id="filters" aria-label="Filtros">
-      <div class="filters__head">
-        <h2>Filtros</h2>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="btn btn--text btn--sm" type="button" id="clear-filters">Limpiar</button>
-          <button class="icon-btn filters__close" type="button" id="close-filters" aria-label="Cerrar filtros">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
-      </div>
+  <!-- ============ VISTA: FILTRAR PERFILES ============ -->
+  <section class="view" id="view-buscar" role="tabpanel" aria-labelledby="tab-buscar">
 
-      <div class="field">
-        <label class="field__label" for="f-q">Buscar</label>
-        <div class="search">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input class="input" id="f-q" type="search" placeholder="Puesto, carrera, curso, código…" autocomplete="off">
-        </div>
-      </div>
-
-      <div class="field">
-        <span class="field__label" id="f-tipo-label">Tipo de convocatoria</span>
-        <div class="seg" role="radiogroup" aria-labelledby="f-tipo-label">
-          <input type="radio" name="tipo" id="tipo-todos" value="" checked><label for="tipo-todos">Todos</label>
-          <input type="radio" name="tipo" id="tipo-fort" value="Fortalecimiento"><label for="tipo-fort">Fortalecimiento</label>
-          <input type="radio" name="tipo" id="tipo-prog" value="Programa de formación"><label for="tipo-prog" title="Programa de formación (Auditor/a Analista I)">Formación</label>
-        </div>
-      </div>
-
-      <hr>
-
-      <div class="field">
-        <label class="field__label" for="f-lugar">Lugar de prestación</label>
-        <input class="input" id="f-lugar" list="dl-lugares" placeholder="Ej. Sede Central, Municipalidad de…" autocomplete="off">
-        <datalist id="dl-lugares"></datalist>
-      </div>
-
-      <div class="field">
-        <label class="field__label" for="f-ambito">Región / ámbito</label>
-        <select class="select" id="f-ambito"><option value="">Todos</option></select>
-      </div>
-
-      <div class="field">
-        <label class="field__label" for="f-organo">Órgano o unidad orgánica</label>
-        <select class="select" id="f-organo"><option value="">Todos</option></select>
-      </div>
-
-      <div class="field">
-        <span class="field__label">Escala remunerativa</span>
-        <div class="scale-list" id="f-escalas"></div>
-      </div>
-
-      <hr>
-
-      <div class="field">
-        <label class="field__label" for="f-carrera">Carrera</label>
-        <input class="input" id="f-carrera" list="dl-carreras" placeholder="Ej. Derecho, Contabilidad…" autocomplete="off">
-        <datalist id="dl-carreras"></datalist>
-      </div>
-
-      <div class="field">
-        <label class="field__label" for="f-nivel">Nivel educativo</label>
-        <select class="select" id="f-nivel"><option value="">Todos</option></select>
-      </div>
-
-      <div class="field">
-        <label class="field__label" for="f-exp">Mi experiencia general</label>
-        <select class="select" id="f-exp">
-          <option value="">Cualquiera</option>
-          <option value="2">Hasta 2 años</option>
-          <option value="3">Hasta 3 años</option>
-          <option value="4">Hasta 4 años</option>
-          <option value="5">Hasta 5 años</option>
-          <option value="6">Hasta 6 años</option>
-        </select>
-        <span class="field__hint">Muestra los perfiles que piden esa experiencia o menos.</span>
-      </div>
-
-      <div class="field">
-        <label class="check"><input type="checkbox" id="f-sinesp"> Sin experiencia específica</label>
-        <label class="check"><input type="checkbox" id="f-sinpub"> Sin experiencia en sector público</label>
-        <label class="check"><input type="checkbox" id="f-sincol"> No exige colegiatura</label>
-      </div>
-    </aside>
-
-    <!-- ============ CONTENIDO ============ -->
-    <section aria-label="Resultados">
-      <div class="tiles" id="tiles" aria-live="polite"></div>
-
-      <div class="charts">
-        <div class="card chart">
-          <div class="chart__head"><h3>Posiciones por escala remunerativa</h3><span>Clic para filtrar</span></div>
-          <div class="hbars" id="chart-escala"></div>
-        </div>
-        <div class="card chart">
-          <div class="chart__head"><h3>Posiciones por región / ámbito</h3><span>Clic para filtrar</span></div>
-          <div class="hbars" id="chart-ambito"></div>
-          <button class="btn btn--text btn--sm chart__more" type="button" id="chart-ambito-more"></button>
-        </div>
-      </div>
-
-      <div class="results-bar">
-        <div class="results-bar__count" id="count"></div>
-        <div class="results-bar__tools">
-          <button class="btn btn--ghost btn--sm filters-toggle" type="button" id="open-filters">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-            Filtros
-          </button>
-          <label class="sr-only" for="sort">Ordenar por</label>
-          <select class="select" id="sort">
-            <option value="codigo">Ordenar: código</option>
-            <option value="rem-desc">Mayor remuneración</option>
-            <option value="rem-asc">Menor remuneración</option>
-            <option value="pos-desc">Más posiciones</option>
-            <option value="exp-asc">Menor experiencia</option>
-          </select>
-          <label class="sr-only" for="per-page">Perfiles por página</label>
-          <select class="select" id="per-page">
-            <option value="12">12 por página</option>
-            <option value="24">24 por página</option>
-            <option value="48">48 por página</option>
-          </select>
-        </div>
-      </div>
-
+    <!-- Resumen visible cuando los filtros están ocultos -->
+    <div class="filter-summary" id="filter-summary" hidden>
+      <span class="filter-summary__text">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></svg>
+        <span id="filter-summary-text" aria-live="polite"></span>
+      </span>
       <div class="active-filters" id="active-filters"></div>
-      <div class="results" id="results"></div>
-      <nav class="pager" id="pager" aria-label="Paginación"></nav>
-    </section>
-  </div>
+      <button class="btn btn--primary btn--sm" type="button" id="edit-filters" aria-controls="filter-panel" aria-expanded="false">Modificar filtros</button>
+    </div>
+
+    <!-- Panel de filtros -->
+    <div class="card filter-panel" id="filter-panel" role="region" aria-labelledby="filters-title">
+      <div class="filter-panel__head">
+        <h2 id="filters-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></svg>
+          Filtros
+        </h2>
+        <button class="btn btn--text btn--sm" type="button" id="clear-filters">Limpiar filtros</button>
+      </div>
+
+      <div class="filter-grid">
+        <div class="field field--wide">
+          <label class="field__label" for="f-q">Buscar</label>
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input class="input" id="f-q" type="search" placeholder="Puesto, carrera, curso, código…" autocomplete="off" enterkeyhint="search">
+          </div>
+        </div>
+
+        <div class="field field--wide">
+          <span class="field__label" id="f-tipo-label">Tipo de convocatoria</span>
+          <div class="seg" role="radiogroup" aria-labelledby="f-tipo-label">
+            <input type="radio" name="tipo" id="tipo-todos" value="" checked><label for="tipo-todos">Todos</label>
+            <input type="radio" name="tipo" id="tipo-fort" value="Fortalecimiento"><label for="tipo-fort">Fortalecimiento</label>
+            <input type="radio" name="tipo" id="tipo-prog" value="Programa de formación"><label for="tipo-prog" title="Programa de formación (Auditor/a Analista I)">Programa de formación</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="f-lugar">Lugar de prestación</label>
+          <input class="input" id="f-lugar" list="dl-lugares" placeholder="Ej. Sede Central, Municipalidad…" autocomplete="off" enterkeyhint="done">
+          <datalist id="dl-lugares"></datalist>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="f-ambito">Región / ámbito</label>
+          <select class="select" id="f-ambito"><option value="">Todos</option></select>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="f-organo">Órgano o unidad orgánica</label>
+          <select class="select" id="f-organo"><option value="">Todos</option></select>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="f-carrera">Carrera</label>
+          <input class="input" id="f-carrera" list="dl-carreras" placeholder="Ej. Derecho, Contabilidad…" autocomplete="off" enterkeyhint="done">
+          <datalist id="dl-carreras"></datalist>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="f-nivel">Nivel educativo</label>
+          <select class="select" id="f-nivel"><option value="">Todos</option></select>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="f-exp">Mi experiencia general</label>
+          <select class="select" id="f-exp">
+            <option value="">Cualquiera</option>
+            <option value="2">Hasta 2 años</option>
+            <option value="3">Hasta 3 años</option>
+            <option value="4">Hasta 4 años</option>
+            <option value="5">Hasta 5 años</option>
+            <option value="6">Hasta 6 años</option>
+          </select>
+          <span class="field__hint">Perfiles que piden esa experiencia o menos.</span>
+        </div>
+
+        <div class="field field--full">
+          <span class="field__label">Escala remunerativa</span>
+          <div class="scale-list" id="f-escalas"></div>
+        </div>
+
+        <div class="field field--full">
+          <span class="field__label">Otros requisitos</span>
+          <div class="checks">
+            <label class="check"><input type="checkbox" id="f-sinesp"> Sin experiencia específica</label>
+            <label class="check"><input type="checkbox" id="f-sinpub"> Sin experiencia en sector público</label>
+            <label class="check"><input type="checkbox" id="f-sincol"> No exige colegiatura</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-panel__foot">
+        <span class="filter-panel__live" id="live-count" aria-live="polite"></span>
+        <button class="btn btn--primary" type="button" id="apply-filters">Aceptar</button>
+      </div>
+    </div>
+
+    <!-- Resultados -->
+    <div class="results-bar" id="results-top">
+      <div class="results-bar__count" id="count"></div>
+      <div class="results-bar__tools">
+        <label class="sr-only" for="sort">Ordenar por</label>
+        <select class="select" id="sort">
+          <option value="codigo">Ordenar: código</option>
+          <option value="rem-desc">Mayor remuneración</option>
+          <option value="rem-asc">Menor remuneración</option>
+          <option value="pos-desc">Más posiciones</option>
+          <option value="exp-asc">Menor experiencia</option>
+        </select>
+        <label class="sr-only" for="per-page">Perfiles por página</label>
+        <select class="select" id="per-page">
+          <option value="12">12 por página</option>
+          <option value="24">24 por página</option>
+          <option value="48">48 por página</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="results" id="results"></div>
+    <nav class="pager" id="pager" aria-label="Paginación"></nav>
+  </section>
+
+  <!-- ============ VISTA: INFORMACIÓN GENERAL ============ -->
+  <section class="view" id="view-general" role="tabpanel" aria-labelledby="tab-general" hidden>
+    <p class="view__intro">
+      Resumen de los 397 perfiles y 1,049 posiciones convocadas por órgano, región y escala remunerativa.
+      Haz clic en una barra para ver esos perfiles.
+    </p>
+
+    <div class="filter-summary" id="general-note" hidden>
+      <span class="filter-summary__text">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 3H2l8 9.46V19l4 2v-8.54z"/></svg>
+        <span id="general-note-text"></span>
+      </span>
+      <button class="btn btn--ghost btn--sm" type="button" id="clear-general">Limpiar filtros</button>
+    </div>
+
+    <div class="tiles" id="tiles" aria-live="polite"></div>
+
+    <div class="charts">
+      <div class="card chart">
+        <div class="chart__head"><h3>Posiciones por escala remunerativa</h3><span>Clic para ver esos perfiles</span></div>
+        <div class="hbars" id="chart-escala"></div>
+      </div>
+      <div class="card chart">
+        <div class="chart__head"><h3>Posiciones por región / ámbito</h3><span>Clic para ver esos perfiles</span></div>
+        <div class="hbars" id="chart-ambito"></div>
+        <button class="btn btn--text btn--sm chart__more" type="button" id="chart-ambito-more"></button>
+      </div>
+    </div>
+  </section>
 </main>
 
 <!-- ============ DETALLE DEL PERFIL ============ -->
