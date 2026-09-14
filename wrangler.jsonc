@@ -1,0 +1,9 @@
+{
+  // Sitio estático servido por Cloudflare Workers (sin código de servidor).
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "convocatoria-cgr",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "."
+  }
+}
