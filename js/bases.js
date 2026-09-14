@@ -51,7 +51,13 @@
     if (!a) return;
     a.classList.add('is-active');
     if (window.matchMedia('(max-width: 960px)').matches) {
-      a.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+      // Solo se desplaza la barra horizontal del índice. scrollIntoView() también movía la página
+      // en vertical y frenaba el deslizamiento en móvil.
+      const barra = a.closest('ol');
+      if (barra) {
+        const left = a.offsetLeft - (barra.clientWidth - a.offsetWidth) / 2;
+        barra.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+      }
     }
   }
 
