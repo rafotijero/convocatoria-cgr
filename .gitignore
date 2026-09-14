@@ -1,0 +1,12 @@
+# Documentos fuente en PDF (pesados; se publican en el portal de la Contraloría)
+*.pdf
+
+# Configuración local del editor / herramientas
+.claude/
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
+node_modules/
