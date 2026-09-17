@@ -188,9 +188,12 @@
 
   const SORTS = {
     codigo: (a, b) => a.id.localeCompare(b.id),
+    'puesto-asc': (a, b) => collator.compare(a.puesto, b.puesto) || a.id.localeCompare(b.id),
     'rem-desc': (a, b) => b.remuneracion - a.remuneracion || a.id.localeCompare(b.id),
     'rem-asc': (a, b) => a.remuneracion - b.remuneracion || a.id.localeCompare(b.id),
     'pos-desc': (a, b) => b.posiciones - a.posiciones || a.id.localeCompare(b.id),
+    'pos-asc': (a, b) => a.posiciones - b.posiciones || a.id.localeCompare(b.id),
+    'exp-desc': (a, b) => b.exp.generalAnios - a.exp.generalAnios || a.id.localeCompare(b.id),
     'exp-asc': (a, b) => a.exp.generalAnios - b.exp.generalAnios || a.id.localeCompare(b.id),
   };
 
