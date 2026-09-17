@@ -3,7 +3,7 @@
   'use strict';
 
   /* ---------- Cuenta regresiva al cierre de inscripción ---------- */
-  var CIERRE = new Date('2026-09-25T17:30:00-05:00');
+  var CIERRE = new Date('2026-09-30T17:30:00-05:00');
   var cd = document.getElementById('countdown');
   var cdEstado = document.getElementById('countdown-status');
 

@@ -1,21 +1,22 @@
 /*
- * Genera js/data.js a partir de los anexos del CPM N° 05-2026-CG.
+ * Genera js/data.js a partir de los anexos del CPM N° {CPM}-2026-CG.
  *  - Anexo 2 (.md): consolidado de puestos, remuneración.
  *  - Anexo 3 (.md): identificación, misión, funciones, ofimática/idiomas.
  *  - Anexo 3 (.pdf vía pdftotext -layout): formación, conocimientos, cursos,
  *    experiencia, habilidades, requisitos adicionales y lugares (en el .md
  *    esas tablas quedaron desordenadas).
- * Uso: node tools/generar-datos.js
+ * Uso: node tools/generar-datos.js [número de concurso, ej. 06] (por defecto 06)
  */
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+const CPM = (process.argv[2] || '06').padStart(2, '0');
 const ROOT = path.resolve(__dirname, '..');
-const MD2 = path.join(ROOT, 'CPM_05_2026_Anexo2.md');
-const MD3 = path.join(ROOT, 'CPM_05_2026_Anexo3.md');
-const PDF3 = path.join(ROOT, 'CPM_05_2026_Anexo3.pdf');
+const MD2 = path.join(ROOT, `CPM_${CPM}_2026_Anexo2.md`);
+const MD3 = path.join(ROOT, `CPM_${CPM}_2026_Anexo3.md`);
+const PDF3 = path.join(ROOT, `CPM_${CPM}_2026_Anexo3.pdf`);
 const OUT = path.join(ROOT, 'js', 'data.js');
 
 const squash = (s) => (s || '').replace(/\s+/g, ' ').trim();
@@ -89,15 +90,26 @@ function toYears(s) {
 }
 
 /* ---------- Anexo 2 ---------- */
+// Desde el CPM N° 06-2026 el Anexo 2 ya no trae la columna TIPO (PROGRAMA DE
+// FORMACION / FORTALECIMIENTO); se infiere del puesto, ya que el Programa de
+// Formación y Entrenamiento aplica únicamente a Auditor/a Analista I (ver Bases, 3.10).
+const esProgramaFormacion = (puesto) => /^AUDITOR\/A ANALISTA I EN /.test(puesto);
+
 function parseAnexo2() {
   const map = {};
   for (const line of fs.readFileSync(MD2, 'utf8').split(/\r?\n/)) {
     if (!/^\|\d{3} - 2026\|/.test(line)) continue;
     const c = line.split('|').slice(1, -1).map((x) => x.trim()).filter(Boolean);
-    const [cod, tipo, categoria, unidad, puesto, n, lugar, rem] = c;
+    let cod, tipo, categoria, unidad, puesto, n, lugar, rem;
+    if (c.length >= 8) {
+      [cod, tipo, categoria, unidad, puesto, n, lugar, rem] = c;
+    } else {
+      [cod, categoria, unidad, puesto, n, lugar, rem] = c;
+      tipo = esProgramaFormacion(puesto) ? 'PROGRAMA DE FORMACION' : 'FORTALECIMIENTO';
+    }
     let code = cod.slice(0, 3);
     if (map[code]) {
-      // El Anexo 2 repite el código 341 (el segundo corresponde al perfil 342).
+      // El Anexo 2 a veces repite un código (el segundo registro corresponde al siguiente perfil).
       const next = String(+code + 1).padStart(3, '0');
       console.log(`Anexo 2: código ${code} duplicado, se reasigna a ${next} (${lugar})`);
       code = next;
@@ -123,7 +135,11 @@ function parseAnexo3Md() {
   for (let i = 1; i < parts.length; i += 2) {
     const code = parts[i];
     const body = parts[i + 1];
-    const head = squash(body.slice(0, body.indexOf('|FUNCIONES DEL PUESTO|')));
+    // "FUNCIONES DEL PUESTO" viene como tabla (|FUNCIONES DEL PUESTO||) cuando el
+    // conversor la detectó bien, o como texto corrido (**FUNCIONES DEL PUESTO**) si no.
+    const fnMarkers = [body.indexOf('|FUNCIONES DEL PUESTO|'), body.indexOf('**FUNCIONES DEL PUESTO**')].filter((x) => x >= 0);
+    const fnMarker = fnMarkers.length ? Math.min(...fnMarkers) : body.length;
+    const head = squash(body.slice(0, fnMarker));
     const m = head.match(/ÓRGANO:\s*(.*?)\s+UNIDAD ORGÁNICA:\s*(.*?)\s+NOMBRE DEL CARGO:\s*(.*?)\s+CLASIFICACIÓN:\s*(.*?)\s+NOMBRE DEL PUESTO:\s*(.*?)\s+DEPENDENCIA JERÁRQUICA:\s*(.*?)\s+N° DE POSICIONES:\s*(\d+)\s+CATEGORÍA REMUNERATIVA:\s*(.*?)\s+\*\*MISIÓN DEL PUESTO\*\*\s*(.*)$/);
     const rec = { code };
     if (m) {
@@ -178,7 +194,7 @@ function pdfText() {
     console.error(`Falta ${path.basename(PDF3)} en la raíz del proyecto (los PDF no se versionan; descárgalo del portal de la Contraloría).`);
     process.exit(1);
   }
-  const tmp = path.join(os.tmpdir(), 'cpm05_anexo3_layout.txt');
+  const tmp = path.join(os.tmpdir(), `cpm${CPM}_anexo3_layout.txt`);
   if (!fs.existsSync(tmp) || fs.statSync(tmp).mtimeMs < fs.statSync(PDF3).mtimeMs) {
     execFileSync('pdftotext', ['-layout', '-enc', 'UTF-8', PDF3, tmp]);
   }
@@ -298,7 +314,7 @@ function cleanPdfLines(txt) {
       continue;
     }
     if (/[a-z][A-Z][a-z]|[A-Z][a-z][A-Z][a-z]/.test(l)) continue; // firma entremezclada ilegible
-    if (/Concurso Público de Méritos N° 05-2026-CG\s*$/.test(l)) continue;
+    if (/Concurso Público de Méritos N° \d{2}-2026-CG\s*$/.test(l)) continue;
     if (/^\s*"Fortalecimiento de los Órganos/.test(l)) continue;
     if (/^\s*CÓDIGO DEL PERFIL\s*$/.test(l)) continue;
     if (/^\s*\d{4}\s*$/.test(l)) continue;

@@ -376,7 +376,7 @@
         <div class="fact"><div class="fact__label">Posiciones</div><div class="fact__value">${p.posiciones}</div><div class="fact__hint">${p.lugares.length} ${p.lugares.length === 1 ? 'lugar' : 'lugares'} de prestación</div></div>
         <div class="fact"><div class="fact__label">Tipo</div><div class="fact__value">${esc(p.tipo)}</div><div class="fact__hint">${p.clasificacion ? `Clasificación ${esc(p.clasificacion)}` : esc(catLabel(p.categoria))}</div></div>
       </div>
-      ${p.tipo === 'Programa de formación' ? `<div class="callout" style="margin-bottom:12px">${ICON.cap}<p>Quienes ganen ingresan al <strong>Programa de Formación y Entrenamiento de la Escuela Nacional de Control</strong> durante el periodo de prueba. Deben haber egresado <strong>desde el 01/07/2021</strong>.</p></div>` : ''}
+      ${p.tipo === 'Programa de formación' ? `<div class="callout" style="margin-bottom:12px">${ICON.cap}<p>Quienes ganen ingresan al <strong>Programa de Formación y Entrenamiento de la Escuela Nacional de Control</strong> durante el periodo de prueba.</p></div>` : ''}
       ${panel('star', 'Lo más relevante del perfil', kv([
         ['Formación', esc([p.nivel, p.grado].filter(Boolean).join(' · ') || '—')],
         ['Carreras', esc(carrerasCorto(p))],
