@@ -170,7 +170,7 @@
               <td class="num muted">${(start + i + 1).toLocaleString('es-PE')}</td>
               <td class="num">${r.dni}</td>
               <td>${escHtml(r.nombre)}</td>
-              <td class="num">${r.perfil}</td>
+              <td class="num"><button class="perfil-link" data-id="${r.perfil}" type="button" title="Ver requisitos del perfil N° ${r.perfil}">${r.perfil}</button></td>
               <td>${COND_TAG[r.cond]}</td>
             </tr>`
         )
@@ -281,6 +281,12 @@
     perPage = parseInt(perPageEl.value, 10);
     page = 1;
     render();
+  });
+
+  tbody.addEventListener('click', (e) => {
+    const btn = e.target.closest('.perfil-link');
+    if (!btn || !window.CPM_PERFIL_DRAWER) return;
+    window.CPM_PERFIL_DRAWER.open(btn.dataset.id);
   });
 
   pagerEl.addEventListener('click', (e) => {

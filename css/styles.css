@@ -774,3 +774,9 @@ details.acc > .acc__body > :last-child { margin-bottom: 0; }
 .res-table tr:last-child td { border-bottom: 0; }
 .res-table tbody tr:hover { background: var(--surface-2); }
 .res-table td:nth-child(3) { font-weight: 550; }
+.perfil-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--accent); font: inherit; font-variant-numeric: tabular-nums;
+  text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px;
+}
+.perfil-link:hover { text-decoration-style: solid; }
