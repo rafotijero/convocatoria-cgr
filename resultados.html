@@ -37,6 +37,20 @@
     </div>
   </div>
 
+  <!-- Tarjeta del perfil seleccionado -->
+  <div class="res-perfil-card card" id="res-perfil-card" hidden>
+    <div class="res-perfil-card__body">
+      <button class="res-perfil-card__code btn btn--text" id="res-perfil-link" type="button" aria-label="Ver requisitos del perfil">
+        <span id="rpc-code"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:15px;height:15px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </button>
+      <div class="res-perfil-card__main">
+        <h2 class="res-perfil-card__title" id="rpc-title"></h2>
+        <p class="res-perfil-card__meta" id="rpc-meta"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- KPIs -->
   <div class="res-kpis" id="res-kpis">
     <button class="res-kpi res-kpi--all is-active" data-cond="" type="button">
@@ -130,6 +144,35 @@
 
 </main>
 
+<!-- ============ DRAWER DE DETALLE DEL PERFIL ============ -->
+<dialog class="drawer" id="detail" aria-labelledby="d-title">
+  <div class="drawer__inner">
+    <header class="drawer__head">
+      <span class="eyebrow" id="d-code"></span>
+      <h2 id="d-title"></h2>
+      <p id="d-org"></p>
+      <div class="drawer__actions">
+        <button class="icon-btn" type="button" id="d-close" aria-label="Cerrar detalle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="drawer__tabs" role="tablist" aria-label="Secciones del perfil">
+      <button type="button" role="tab" data-tab="resumen" aria-selected="true">Resumen</button>
+      <button type="button" role="tab" data-tab="formacion" aria-selected="false">Carreras y cursos</button>
+      <button type="button" role="tab" data-tab="experiencia" aria-selected="false">Experiencia</button>
+      <button type="button" role="tab" data-tab="adicional" aria-selected="false">Detalles adicionales</button>
+      <button type="button" role="tab" data-tab="funciones" aria-selected="false">Funciones</button>
+    </div>
+    <div class="drawer__body" id="d-body" role="tabpanel" tabindex="-1"></div>
+    <footer class="drawer__foot">
+      <button class="btn btn--ghost btn--sm" type="button" id="d-prev">← Anterior</button>
+      <span class="muted num" id="d-pos" style="align-self:center;font-size:.85rem"></span>
+      <button class="btn btn--ghost btn--sm" type="button" id="d-next">Siguiente →</button>
+    </footer>
+  </div>
+</dialog>
+
 <footer class="site-footer">
   <div class="container">
     Resultados publicados por la Subgerencia de Políticas y Desarrollo Humano — Gerencia de Capital Humano,
@@ -140,6 +183,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/resultados-data.js"></script>
+<script src="js/perfil-drawer.js"></script>
 <script src="js/resultados.js"></script>
 </body>
 </html>

@@ -57,23 +57,51 @@
     sel.appendChild(fragment);
   })();
 
+  /* ---------- Lookup de perfiles (data.js) ---------- */
+  const perfilesMap = {};
+  if (window.CPM_DATA) {
+    window.CPM_DATA.perfiles.forEach((p) => { perfilesMap[parseInt(p.id, 10)] = p; });
+  }
+
   /* ---------- Estado ---------- */
   let filtered = records;
   let page = 1;
   let perPage = 50;
 
   /* ---------- Elementos ---------- */
-  const searchEl  = $('f-search');
-  const perfilEl  = $('f-perfil');
-  const condEls   = document.querySelectorAll('input[name="cond"]');
-  const clearBtn  = $('clear-filters');
-  const countEl   = $('res-count');
-  const liveCount = $('live-count');
-  const tbody     = $('res-tbody');
-  const emptyEl   = $('res-empty');
-  const pagerEl   = $('pager');
-  const perPageEl = $('per-page');
-  const kpiEls    = document.querySelectorAll('.res-kpi');
+  const searchEl    = $('f-search');
+  const perfilEl    = $('f-perfil');
+  const condEls     = document.querySelectorAll('input[name="cond"]');
+  const clearBtn    = $('clear-filters');
+  const countEl     = $('res-count');
+  const liveCount   = $('live-count');
+  const tbody       = $('res-tbody');
+  const emptyEl     = $('res-empty');
+  const pagerEl     = $('pager');
+  const perPageEl   = $('per-page');
+  const kpiEls      = document.querySelectorAll('.res-kpi');
+  const perfilCard  = $('res-perfil-card');
+  const perfilLink  = $('res-perfil-link');
+  const rpcCode     = $('rpc-code');
+  const rpcTitle    = $('rpc-title');
+  const rpcMeta     = $('rpc-meta');
+
+  /* ---------- Tarjeta del perfil seleccionado ---------- */
+  function updatePerfilCard() {
+    const id = perfilEl.value !== '' ? parseInt(perfilEl.value, 10) : null;
+    if (!id || !perfilCard) return;
+    const p = perfilesMap[id];
+    if (!p) { perfilCard.hidden = true; return; }
+
+    rpcCode.textContent = `N° ${p.id}-2026`;
+    rpcTitle.textContent = p.puesto;
+
+    const plazas = `${p.posiciones} plaza${p.posiciones !== 1 ? 's' : ''}`;
+    const unidad = p.unidadOrganica && p.unidadOrganica !== p.organo ? p.unidadOrganica : p.organo;
+    rpcMeta.textContent = `${plazas} · ${unidad}`;
+
+    perfilCard.hidden = false;
+  }
 
   /* ---------- Filtrar ---------- */
   function applyFilters() {
@@ -94,6 +122,7 @@
     });
 
     page = 1;
+    updatePerfilCard();
     render();
   }
 
@@ -224,11 +253,22 @@
 
   condEls.forEach((el) => el.addEventListener('change', applyFilters));
 
+  // Botón del código de perfil → abre el drawer
+  if (perfilLink) {
+    perfilLink.addEventListener('click', () => {
+      const id = perfilEl.value;
+      if (id && window.CPM_PERFIL_DRAWER) {
+        window.CPM_PERFIL_DRAWER.open(id);
+      }
+    });
+  }
+
   clearBtn.addEventListener('click', () => {
     searchEl.value = '';
     perfilEl.value = '';
     document.getElementById('cond-todos').checked = true;
     kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === ''));
+    if (perfilCard) perfilCard.hidden = true;
     applyFilters();
   });
 
