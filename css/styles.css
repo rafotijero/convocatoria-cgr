@@ -575,6 +575,8 @@ details.acc > .acc__body > :last-child { margin-bottom: 0; }
 .pcard__place { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.82rem; color: var(--muted); min-width: 0; }
 .pcard__place svg { width: 14px; height: 14px; flex: none; }
 .pcard__place span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcard__postulantes { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 0.82rem; color: var(--accent); text-decoration: none; font-weight: 500; }
+.pcard__postulantes:hover { text-decoration: underline; }
 
 .empty { text-align: center; padding: 48px 16px; color: var(--ink-2); }
 .empty svg { width: 40px; height: 40px; color: var(--muted); margin-bottom: 8px; }

@@ -304,6 +304,13 @@
     $('results-top').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 
-  /* ---------- Arranque ---------- */
+  /* ---------- Arranque: leer ?perfil= de la URL ---------- */
+  const urlPerfil = new URLSearchParams(location.search).get('perfil');
+  if (urlPerfil) {
+    const id = parseInt(urlPerfil, 10);
+    const opts = Array.from(document.querySelectorAll('#dl-perfiles option'));
+    const match = opts.find((o) => parseInt(o.value, 10) === id);
+    perfilEl.value = match ? match.value : String(id);
+  }
   applyFilters();
 })();
