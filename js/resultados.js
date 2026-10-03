@@ -18,11 +18,44 @@
 
   /* ---------- Preprocesar datos una sola vez ---------- */
   // Cada registro: [dni, nombre, perfil, cond_idx]
-  // Añadir campo búsqueda normalizado
   const records = D.data.map((r) => {
     const dniStr = String(r[0]).padStart(8, '0');
     return { dni: dniStr, nombre: r[1], perfil: r[2], cond: r[3], _q: norm(r[1]) + ' ' + dniStr };
   });
+
+  /* ---------- Poblar select de perfiles ---------- */
+  (function buildPerfilSelect() {
+    const sel = $('f-perfil');
+    if (!sel) return;
+
+    // Contar postulantes por perfil desde los datos de resultados
+    const counts = {};
+    records.forEach((r) => { counts[r.perfil] = (counts[r.perfil] || 0) + 1; });
+
+    // Obtener nombres de puestos desde data.js (si está disponible)
+    const nombres = {};
+    if (window.CPM_DATA) {
+      window.CPM_DATA.perfiles.forEach((p) => { nombres[parseInt(p.id, 10)] = p.puesto; });
+    }
+
+    // Construir opciones ordenadas por número de perfil
+    const ids = Object.keys(counts)
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    const fragment = document.createDocumentFragment();
+    ids.forEach((id) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      const nombre = nombres[id] || '';
+      const count = counts[id];
+      // Truncar nombre si es muy largo
+      const label = nombre.length > 70 ? nombre.slice(0, 68) + '…' : nombre;
+      opt.textContent = label ? `N° ${id} — ${label} (${count})` : `N° ${id} (${count})`;
+      fragment.appendChild(opt);
+    });
+    sel.appendChild(fragment);
+  })();
 
   /* ---------- Estado ---------- */
   let filtered = records;
@@ -45,7 +78,7 @@
   /* ---------- Filtrar ---------- */
   function applyFilters() {
     const q       = norm(searchEl.value);
-    const perfilV = perfilEl.value ? parseInt(perfilEl.value, 10) : null;
+    const perfilV = perfilEl.value !== '' ? parseInt(perfilEl.value, 10) : null;
     const condV   = document.querySelector('input[name="cond"]:checked')?.value ?? '';
 
     filtered = records.filter((r) => {
@@ -187,10 +220,7 @@
     searchTimer = setTimeout(applyFilters, 220);
   });
 
-  perfilEl.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(applyFilters, 220);
-  });
+  perfilEl.addEventListener('change', applyFilters);
 
   condEls.forEach((el) => el.addEventListener('change', applyFilters));
 

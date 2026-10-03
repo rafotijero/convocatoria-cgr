@@ -60,16 +60,21 @@
   <!-- Filtros -->
   <div class="card res-filters" id="res-filters">
     <div class="res-filters__row">
+      <div class="field field--full">
+        <label class="field__label" for="f-perfil">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:14px;height:14px;vertical-align:-2px"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+          Perfil de puesto
+        </label>
+        <select class="select" id="f-perfil">
+          <option value="">— Todos los perfiles —</option>
+        </select>
+      </div>
       <div class="field">
         <label class="field__label" for="f-search">Buscar por nombre o DNI</label>
         <div class="search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input class="input" id="f-search" type="search" placeholder="Apellidos, nombres o número de DNI…" autocomplete="off" enterkeyhint="search">
         </div>
-      </div>
-      <div class="field">
-        <label class="field__label" for="f-perfil">N° Perfil</label>
-        <input class="input" id="f-perfil" type="number" min="1" max="999" placeholder="Ej. 404" autocomplete="off">
       </div>
       <div class="field field--wide">
         <span class="field__label" id="f-cond-label">Condición</span>
@@ -133,6 +138,7 @@
   </div>
 </footer>
 
+<script src="js/data.js"></script>
 <script src="js/resultados-data.js"></script>
 <script src="js/resultados.js"></script>
 </body>
