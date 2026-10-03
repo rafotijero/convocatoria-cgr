@@ -285,8 +285,15 @@
 
   tbody.addEventListener('click', (e) => {
     const btn = e.target.closest('.perfil-link');
-    if (!btn || !window.CPM_PERFIL_DRAWER) return;
-    window.CPM_PERFIL_DRAWER.open(btn.dataset.id);
+    if (!btn) return;
+    const id = parseInt(btn.dataset.id, 10);
+    // Buscar la opción del datalist que empiece con ese id
+    const opts = Array.from(document.querySelectorAll('#dl-perfiles option'));
+    const match = opts.find((o) => parseInt(o.value, 10) === id);
+    perfilEl.value = match ? match.value : String(id);
+    searchEl.value = '';
+    applyFilters();
+    $('res-filters').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 
   pagerEl.addEventListener('click', (e) => {
