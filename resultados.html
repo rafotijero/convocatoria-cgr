@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resultados de inscripción · CPM N° 06-2026-CG</title>
+  <meta name="description" content="Resultados de la etapa de inscripción virtual del Concurso Público de Méritos N° 06-2026-CG. Consulta tu condición: CALIFICA, NO CALIFICA o DESCALIFICA.">
+  <script src="js/tema.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true">CGR</span>
+      <span class="brand__text">
+        <span class="brand__title">CPM N° 06-2026-CG</span>
+        <span class="brand__sub">Fortalecimiento de los Órganos y Unidades Orgánicas</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a class="nav__link" href="index.html">Bases</a>
+      <a class="nav__link" href="dashboard.html">Perfiles</a>
+      <a class="nav__link" href="resultados.html" aria-current="page">Resultados</a>
+    </nav>
+    <button class="icon-btn" id="theme-toggle" type="button" aria-label="Cambiar tema"></button>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="dash-head">
+    <div>
+      <h1>Resultados de inscripción virtual</h1>
+      <p class="view__intro">Publicado el 2 de octubre de 2026 · CPM N° 06-2026-CG</p>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="res-kpis" id="res-kpis">
+    <button class="res-kpi res-kpi--all is-active" data-cond="" type="button">
+      <span class="res-kpi__value" id="kpi-total">18,493</span>
+      <span class="res-kpi__label">Total postulantes</span>
+    </button>
+    <button class="res-kpi res-kpi--ok" data-cond="0" type="button">
+      <span class="res-kpi__value">12,726</span>
+      <span class="res-kpi__label">CALIFICA</span>
+    </button>
+    <button class="res-kpi res-kpi--warn" data-cond="1" type="button">
+      <span class="res-kpi__value">2,056</span>
+      <span class="res-kpi__label">NO CALIFICA</span>
+    </button>
+    <button class="res-kpi res-kpi--danger" data-cond="2" type="button">
+      <span class="res-kpi__value">3,711</span>
+      <span class="res-kpi__label">DESCALIFICA</span>
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card res-filters" id="res-filters">
+    <div class="res-filters__row">
+      <div class="field">
+        <label class="field__label" for="f-search">Buscar por nombre o DNI</label>
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="input" id="f-search" type="search" placeholder="Apellidos, nombres o número de DNI…" autocomplete="off" enterkeyhint="search">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="f-perfil">N° Perfil</label>
+        <input class="input" id="f-perfil" type="number" min="1" max="999" placeholder="Ej. 404" autocomplete="off">
+      </div>
+      <div class="field field--wide">
+        <span class="field__label" id="f-cond-label">Condición</span>
+        <div class="seg" role="radiogroup" aria-labelledby="f-cond-label">
+          <input type="radio" name="cond" id="cond-todos" value="" checked><label for="cond-todos">Todos</label>
+          <input type="radio" name="cond" id="cond-cal" value="0"><label for="cond-cal">CALIFICA</label>
+          <input type="radio" name="cond" id="cond-nocal" value="1"><label for="cond-nocal">NO CALIFICA</label>
+          <input type="radio" name="cond" id="cond-desc" value="2"><label for="cond-desc">DESCALIFICA</label>
+        </div>
+      </div>
+    </div>
+    <div class="res-filters__foot">
+      <span class="filter-panel__live" id="live-count" aria-live="polite"></span>
+      <button class="btn btn--text btn--sm" type="button" id="clear-filters">Limpiar filtros</button>
+    </div>
+  </div>
+
+  <!-- Barra de resultados -->
+  <div class="results-bar" id="results-top">
+    <div class="results-bar__count" id="res-count" aria-live="polite"></div>
+    <div class="results-bar__tools">
+      <label class="sr-only" for="per-page">Filas por página</label>
+      <select class="select" id="per-page">
+        <option value="50">50 por página</option>
+        <option value="100">100 por página</option>
+        <option value="200">200 por página</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="res-table-wrap" id="res-table-wrap">
+    <table class="res-table" id="res-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:3.5rem">#</th>
+          <th style="width:7rem">DNI</th>
+          <th>Apellidos y Nombres</th>
+          <th class="num" style="width:5rem">Perfil</th>
+          <th style="width:8rem">Condición</th>
+        </tr>
+      </thead>
+      <tbody id="res-tbody"></tbody>
+    </table>
+    <div class="empty" id="res-empty" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <p>No se encontraron resultados con los filtros aplicados.</p>
+    </div>
+  </div>
+
+  <!-- Paginación -->
+  <nav class="pager" id="pager" aria-label="Paginación de resultados"></nav>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    Resultados publicados por la Subgerencia de Políticas y Desarrollo Humano — Gerencia de Capital Humano,
+    el 2 de octubre de 2026. Ante cualquier diferencia, prevalece el documento oficial publicado por la
+    Contraloría General de la República.
+  </div>
+</footer>
+
+<script src="js/resultados-data.js"></script>
+<script src="js/resultados.js"></script>
+</body>
+</html>
