@@ -37,24 +37,10 @@
     </div>
   </div>
 
-  <!-- Tarjeta del perfil seleccionado -->
-  <div class="res-perfil-card card" id="res-perfil-card" hidden>
-    <div class="res-perfil-card__body">
-      <button class="res-perfil-card__code btn btn--text" id="res-perfil-link" type="button" aria-label="Ver requisitos del perfil">
-        <span id="rpc-code"></span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:15px;height:15px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-      </button>
-      <div class="res-perfil-card__main">
-        <h2 class="res-perfil-card__title" id="rpc-title"></h2>
-        <p class="res-perfil-card__meta" id="rpc-meta"></p>
-      </div>
-    </div>
-  </div>
-
   <!-- KPIs -->
   <div class="res-kpis" id="res-kpis">
     <button class="res-kpi res-kpi--all is-active" data-cond="" type="button">
-      <span class="res-kpi__value" id="kpi-total">18,493</span>
+      <span class="res-kpi__value">18,493</span>
       <span class="res-kpi__label">Total postulantes</span>
     </button>
     <button class="res-kpi res-kpi--ok" data-cond="0" type="button">
@@ -74,15 +60,16 @@
   <!-- Filtros -->
   <div class="card res-filters" id="res-filters">
     <div class="res-filters__row">
+
       <div class="field field--full">
-        <label class="field__label" for="f-perfil">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:14px;height:14px;vertical-align:-2px"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
-          Perfil de puesto
-        </label>
-        <select class="select" id="f-perfil">
-          <option value="">— Todos los perfiles —</option>
-        </select>
+        <label class="field__label" for="f-perfil">Perfil de puesto</label>
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="input" id="f-perfil" list="dl-perfiles" placeholder="Escribe el número o nombre del perfil…" autocomplete="off" enterkeyhint="search">
+          <datalist id="dl-perfiles"></datalist>
+        </div>
       </div>
+
       <div class="field">
         <label class="field__label" for="f-search">Buscar por nombre o DNI</label>
         <div class="search">
@@ -90,15 +77,17 @@
           <input class="input" id="f-search" type="search" placeholder="Apellidos, nombres o número de DNI…" autocomplete="off" enterkeyhint="search">
         </div>
       </div>
-      <div class="field field--wide">
-        <span class="field__label" id="f-cond-label">Condición</span>
-        <div class="seg" role="radiogroup" aria-labelledby="f-cond-label">
-          <input type="radio" name="cond" id="cond-todos" value="" checked><label for="cond-todos">Todos</label>
-          <input type="radio" name="cond" id="cond-cal" value="0"><label for="cond-cal">CALIFICA</label>
-          <input type="radio" name="cond" id="cond-nocal" value="1"><label for="cond-nocal">NO CALIFICA</label>
-          <input type="radio" name="cond" id="cond-desc" value="2"><label for="cond-desc">DESCALIFICA</label>
-        </div>
+
+      <div class="field">
+        <label class="field__label" for="f-cond">Condición</label>
+        <select class="select" id="f-cond">
+          <option value="">Todas las condiciones</option>
+          <option value="0">CALIFICA</option>
+          <option value="1">NO CALIFICA</option>
+          <option value="2">DESCALIFICA</option>
+        </select>
       </div>
+
     </div>
     <div class="res-filters__foot">
       <span class="filter-panel__live" id="live-count" aria-live="polite"></span>
@@ -116,6 +105,20 @@
         <option value="100">100 por página</option>
         <option value="200">200 por página</option>
       </select>
+    </div>
+  </div>
+
+  <!-- Tarjeta del perfil seleccionado (aparece justo antes de la tabla) -->
+  <div class="res-perfil-card card" id="res-perfil-card" hidden>
+    <div class="res-perfil-card__body">
+      <button class="res-perfil-card__code" id="res-perfil-link" type="button" aria-label="Ver requisitos del perfil">
+        <span id="rpc-code"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </button>
+      <div class="res-perfil-card__main">
+        <h2 class="res-perfil-card__title" id="rpc-title"></h2>
+        <p class="res-perfil-card__meta" id="rpc-meta"></p>
+      </div>
     </div>
   </div>
 

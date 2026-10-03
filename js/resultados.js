@@ -23,10 +23,10 @@
     return { dni: dniStr, nombre: r[1], perfil: r[2], cond: r[3], _q: norm(r[1]) + ' ' + dniStr };
   });
 
-  /* ---------- Poblar select de perfiles ---------- */
-  (function buildPerfilSelect() {
-    const sel = $('f-perfil');
-    if (!sel) return;
+  /* ---------- Poblar datalist de perfiles ---------- */
+  (function buildPerfilDatalist() {
+    const dl = $('dl-perfiles');
+    if (!dl) return;
 
     // Contar postulantes por perfil desde los datos de resultados
     const counts = {};
@@ -46,21 +46,26 @@
     const fragment = document.createDocumentFragment();
     ids.forEach((id) => {
       const opt = document.createElement('option');
-      opt.value = id;
       const nombre = nombres[id] || '';
       const count = counts[id];
-      // Truncar nombre si es muy largo
       const label = nombre.length > 70 ? nombre.slice(0, 68) + '…' : nombre;
-      opt.textContent = label ? `N° ${id} — ${label} (${count})` : `N° ${id} (${count})`;
+      opt.value = label ? `${id} — ${label} (${count})` : `${id} (${count})`;
       fragment.appendChild(opt);
     });
-    sel.appendChild(fragment);
+    dl.appendChild(fragment);
   })();
 
   /* ---------- Lookup de perfiles (data.js) ---------- */
   const perfilesMap = {};
   if (window.CPM_DATA) {
     window.CPM_DATA.perfiles.forEach((p) => { perfilesMap[parseInt(p.id, 10)] = p; });
+  }
+
+  /* ---------- Extraer número de perfil desde texto libre ---------- */
+  function perfilIdFromInput(val) {
+    if (!val || !val.trim()) return null;
+    const n = parseInt(val, 10);
+    return isNaN(n) ? null : n;
   }
 
   /* ---------- Estado ---------- */
@@ -71,7 +76,7 @@
   /* ---------- Elementos ---------- */
   const searchEl    = $('f-search');
   const perfilEl    = $('f-perfil');
-  const condEls     = document.querySelectorAll('input[name="cond"]');
+  const condEl      = $('f-cond');
   const clearBtn    = $('clear-filters');
   const countEl     = $('res-count');
   const liveCount   = $('live-count');
@@ -88,8 +93,8 @@
 
   /* ---------- Tarjeta del perfil seleccionado ---------- */
   function updatePerfilCard() {
-    const id = perfilEl.value !== '' ? parseInt(perfilEl.value, 10) : null;
-    if (!id || !perfilCard) return;
+    const id = perfilIdFromInput(perfilEl.value);
+    if (!id || !perfilCard) { if (perfilCard) perfilCard.hidden = true; return; }
     const p = perfilesMap[id];
     if (!p) { perfilCard.hidden = true; return; }
 
@@ -106,8 +111,8 @@
   /* ---------- Filtrar ---------- */
   function applyFilters() {
     const q       = norm(searchEl.value);
-    const perfilV = perfilEl.value !== '' ? parseInt(perfilEl.value, 10) : null;
-    const condV   = document.querySelector('input[name="cond"]:checked')?.value ?? '';
+    const perfilV = perfilIdFromInput(perfilEl.value);
+    const condV   = condEl.value;
 
     filtered = records.filter((r) => {
       if (q && !r._q.includes(q)) return false;
@@ -222,9 +227,7 @@
   kpiEls.forEach((el) => {
     el.addEventListener('click', () => {
       const val = el.dataset.cond;
-      // Actualizar radio
-      document.querySelector(`input[name="cond"][value="${val}"]`).checked = true;
-      // Quitar active de todos, poner en este
+      condEl.value = val;
       kpiEls.forEach((k) => k.classList.remove('is-active'));
       el.classList.add('is-active');
       applyFilters();
@@ -232,13 +235,11 @@
     });
   });
 
-  // Sincronizar KPI activo cuando cambia el radio manualmente
-  condEls.forEach((el) => {
-    el.addEventListener('change', () => {
-      const val = el.value;
-      kpiEls.forEach((k) => {
-        k.classList.toggle('is-active', k.dataset.cond === val);
-      });
+  // Sincronizar KPI activo cuando cambia el select manualmente
+  condEl.addEventListener('change', () => {
+    const val = condEl.value;
+    kpiEls.forEach((k) => {
+      k.classList.toggle('is-active', k.dataset.cond === val);
     });
   });
 
@@ -249,16 +250,20 @@
     searchTimer = setTimeout(applyFilters, 220);
   });
 
-  perfilEl.addEventListener('change', applyFilters);
+  let perfilTimer;
+  perfilEl.addEventListener('input', () => {
+    clearTimeout(perfilTimer);
+    perfilTimer = setTimeout(applyFilters, 220);
+  });
 
-  condEls.forEach((el) => el.addEventListener('change', applyFilters));
+  condEl.addEventListener('change', applyFilters);
 
   // Botón del código de perfil → abre el drawer
   if (perfilLink) {
     perfilLink.addEventListener('click', () => {
-      const id = perfilEl.value;
+      const id = perfilIdFromInput(perfilEl.value);
       if (id && window.CPM_PERFIL_DRAWER) {
-        window.CPM_PERFIL_DRAWER.open(id);
+        window.CPM_PERFIL_DRAWER.open(String(id));
       }
     });
   }
@@ -266,7 +271,7 @@
   clearBtn.addEventListener('click', () => {
     searchEl.value = '';
     perfilEl.value = '';
-    document.getElementById('cond-todos').checked = true;
+    condEl.value = '';
     kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === ''));
     if (perfilCard) perfilCard.hidden = true;
     applyFilters();
