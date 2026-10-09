@@ -4,6 +4,7 @@ Sitio estático para consultar el **Concurso Público de Méritos N° 06-2026-CG
 
 - **`index.html` — Bases:** resumen de las bases con cronograma, etapas y pesos, requisitos, documentos, evaluación curricular, puntaje adicional, bonificaciones, desempate e impugnación.
 - **`dashboard.html` — Perfiles:** filtros por lugar de prestación, región, órgano, escala remunerativa (con monto), carrera, nivel educativo y experiencia; gráficos, resultados paginados y detalle de cada perfil (carreras, cursos, experiencia, requisitos adicionales, lugares y funciones).
+- **`resultados.html` — Inscripción:** resultados de la inscripción virtual con filtros por perfil, nombre o DNI, condición, sede, local y aula de evaluación; al filtrar un local muestra su dirección de ingreso, fecha y horario.
 
 ## Uso
 
@@ -15,7 +16,7 @@ node tools/servidor.js
 
 y entra a http://localhost:5500.
 
-Los filtros y el perfil abierto quedan en la URL, por ejemplo `dashboard.html?perfil=403`.
+Los filtros y el perfil abierto quedan en la URL, por ejemplo `dashboard.html?perfil=403`. La página de inscripción acepta `?perfil=`, `?sede=`, `?local=` y `?aula=` (sede y local por su número de orden en la publicación oficial), por ejemplo `resultados.html?sede=4`.
 
 ## Estructura
 
@@ -28,6 +29,7 @@ js/dashboard.js       Lógica del dashboard
 js/bases.js           Cuenta regresiva, cronograma e índice
 js/tema.js            Selector de tema
 tools/generar-datos.js  Genera js/data.js a partir de los anexos
+tools/generar-resultados.js  Genera js/resultados-data.js (inscripción y sedes)
 tools/servidor.js     Servidor estático mínimo
 CPM_06_2026_*.md      Texto de las bases y anexos
 ```
@@ -44,5 +46,13 @@ node tools/generar-datos.js 05     # o una convocatoria anterior
 ```
 
 El script cruza ambas fuentes, valida que los lugares sumen las posiciones de cada perfil y muestra los avisos encontrados.
+
+`js/resultados-data.js` se genera a partir de los resultados de inscripción virtual y de la publicación de sedes de evaluación (`archivos/02 AptosFichaInscripcion` y `archivos/03 SedesEvaluacion`):
+
+```bash
+node tools/generar-resultados.js
+```
+
+Cruza ambos archivos por N° de documento y código de perfil, y falla si algún postulante que CALIFICA queda sin local y aula.
 
 > Resumen informativo. Ante cualquier diferencia, prevalecen los documentos oficiales publicados por la Contraloría General de la República.

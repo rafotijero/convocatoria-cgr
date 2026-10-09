@@ -33,7 +33,7 @@
   <div class="dash-head">
     <div>
       <h1>Resultados de inscripción virtual</h1>
-      <p class="view__intro">Publicado el 2 de octubre de 2026 · CPM N° 06-2026-CG</p>
+      <p class="view__intro">Publicado el 2 de octubre de 2026 · Sedes de evaluación publicadas el 7 de octubre de 2026 · CPM N° 06-2026-CG</p>
     </div>
   </div>
 
@@ -88,6 +88,28 @@
         </select>
       </div>
 
+      <div class="field">
+        <label class="field__label" for="f-sede">Sede de evaluación</label>
+        <select class="select" id="f-sede">
+          <option value="">Todas las sedes</option>
+        </select>
+        <span class="field__hint">Solo los postulantes que CALIFICAN tienen sede asignada.</span>
+      </div>
+
+      <div class="field" id="field-local" hidden>
+        <label class="field__label" for="f-local">Local de evaluación</label>
+        <select class="select" id="f-local">
+          <option value="">Todos los locales</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-aula">Aula</label>
+        <select class="select" id="f-aula" disabled>
+          <option value="">Todas las aulas</option>
+        </select>
+      </div>
+
     </div>
     <div class="res-filters__foot">
       <span class="filter-panel__live" id="live-count" aria-live="polite"></span>
@@ -122,6 +144,18 @@
     </div>
   </div>
 
+  <!-- Tarjeta del local de evaluación (sede/local filtrado o único entre los resultados) -->
+  <div class="res-perfil-card card" id="res-local-card" hidden>
+    <div class="res-perfil-card__body">
+      <span class="res-local-card__sede" id="rlc-sede"></span>
+      <div class="res-perfil-card__main">
+        <h2 class="res-perfil-card__title" id="rlc-title"></h2>
+        <p class="res-perfil-card__meta" id="rlc-dir"></p>
+        <p class="res-perfil-card__meta" id="rlc-eval"></p>
+      </div>
+    </div>
+  </div>
+
   <!-- Tabla -->
   <div class="res-table-wrap" id="res-table-wrap">
     <table class="res-table" id="res-table">
@@ -132,6 +166,8 @@
           <th>Apellidos y Nombres</th>
           <th class="num" style="width:5rem">Perfil</th>
           <th style="width:8rem">Condición</th>
+          <th>Sede y local de evaluación</th>
+          <th class="num" style="width:4.5rem">Aula</th>
         </tr>
       </thead>
       <tbody id="res-tbody"></tbody>
@@ -179,7 +215,7 @@
 <footer class="site-footer">
   <div class="container">
     Resultados publicados por la Subgerencia de Políticas y Desarrollo Humano — Gerencia de Capital Humano,
-    el 2 de octubre de 2026. Ante cualquier diferencia, prevalece el documento oficial publicado por la
+    el 2 de octubre de 2026; sedes, locales y aulas de evaluación publicados el 7 de octubre de 2026. Ante cualquier diferencia, prevalece el documento oficial publicado por la
     Contraloría General de la República.
   </div>
 </footer>

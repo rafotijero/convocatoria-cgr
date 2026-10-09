@@ -782,3 +782,16 @@ details.acc > .acc__body > :last-child { margin-bottom: 0; }
   text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px;
 }
 .perfil-link:hover { text-decoration-style: solid; }
+
+/* Sede, local y aula de evaluación */
+.res-local { min-width: 15rem; }
+.local-link { text-align: left; }
+.res-local__name { display: block; font-size: 0.78rem; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+.res-local-card__sede {
+  flex: none;
+  font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 6px 12px; border-radius: var(--radius-sm);
+  background: var(--accent-soft); color: var(--accent-ink);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.res-perfil-card__meta + .res-perfil-card__meta { margin-top: 4px; }
