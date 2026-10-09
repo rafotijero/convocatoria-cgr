@@ -43,6 +43,8 @@ const filasSedes = filas(MD_SEDES);
 // El nombre de dos locales de Lima indica que atienden a postulantes con
 // discapacidad; se omite esa etiqueta para no exponer ese dato por persona.
 const nombreLocal = (s) => s.replace(/\s*-\s*POSTULANTES CON DISCAPACIDAD/i, '');
+// Errata de la publicación, presente en nombres de local y en una dirección
+const corregir = (s) => s.replace(/\bUNIVESIDAD\b/g, 'UNIVERSIDAD');
 
 const sedes = [];
 const locales = []; // [sedeIdx, nombre, dirección]
@@ -53,7 +55,7 @@ filasSedes
     if (!sedes.includes(sede)) sedes.push(sede);
     if (localIdx.has(local)) fail(`local repetido en el catálogo: ${local}`);
     localIdx.set(local, locales.length);
-    locales.push([sedes.indexOf(sede), nombreLocal(local), direccion]);
+    locales.push([sedes.indexOf(sede), corregir(nombreLocal(local)), corregir(direccion)]);
   });
 if (!locales.length) fail('no se encontró el catálogo de locales');
 
