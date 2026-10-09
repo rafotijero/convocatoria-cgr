@@ -375,13 +375,16 @@
     });
   }
 
-  clearBtn.addEventListener('click', () => {
+  function clearFilters() {
     searchEl.value = '';
     perfilEl.value = '';
     condEl.value = '';
     setSede(null, null, null);
     kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === ''));
-    if (perfilCard) perfilCard.hidden = true;
+  }
+
+  clearBtn.addEventListener('click', () => {
+    clearFilters();
     applyFilters();
   });
 
@@ -391,36 +394,25 @@
     render();
   });
 
+  // Enlaces de la tabla: cada uno deja activo solo su propio filtro
+  // (el aula arrastra su sede y local, de los que depende)
   tbody.addEventListener('click', (e) => {
     const btn = e.target.closest('.perfil-link');
     if (!btn) return;
-    // Aula de la fila → filtra solo por sede, local y aula; limpia el resto
+    clearFilters();
     if (btn.dataset.aula) {
       const l = LOCALES[parseInt(btn.dataset.aulaLocal, 10)];
       setSede(l.sede, l.idx, parseInt(btn.dataset.aula, 10));
-      searchEl.value = '';
-      perfilEl.value = '';
-      condEl.value = '';
-      kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === ''));
-      applyFilters();
-      $('res-filters').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      return;
-    }
-    // Sede/local de la fila → filtra los postulantes de ese local
-    if (btn.dataset.local) {
+    } else if (btn.dataset.local) {
       const l = LOCALES[parseInt(btn.dataset.local, 10)];
       setSede(l.sede, l.idx, null);
-      searchEl.value = '';
-      applyFilters();
-      $('res-filters').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      return;
+    } else {
+      const id = parseInt(btn.dataset.id, 10);
+      // Buscar la opción del datalist que empiece con ese id
+      const opts = Array.from(document.querySelectorAll('#dl-perfiles option'));
+      const match = opts.find((o) => parseInt(o.value, 10) === id);
+      perfilEl.value = match ? match.value : String(id);
     }
-    const id = parseInt(btn.dataset.id, 10);
-    // Buscar la opción del datalist que empiece con ese id
-    const opts = Array.from(document.querySelectorAll('#dl-perfiles option'));
-    const match = opts.find((o) => parseInt(o.value, 10) === id);
-    perfilEl.value = match ? match.value : String(id);
-    searchEl.value = '';
     applyFilters();
     $('res-filters').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
