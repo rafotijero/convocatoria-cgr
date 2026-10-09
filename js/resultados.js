@@ -280,7 +280,7 @@
     if (r.local < 0) return '<td class="muted">—</td><td class="num muted">—</td>';
     const l = LOCALES[r.local];
     return `<td class="res-local"><button class="perfil-link local-link" data-local="${l.idx}" type="button" title="Ver postulantes de este local">${escHtml(SEDES[l.sede])}</button><span class="res-local__name">${escHtml(l.nombre)}</span></td>
-              <td class="num">${r.aula}</td>`;
+              <td class="num"><button class="perfil-link" data-aula="${r.aula}" data-aula-local="${l.idx}" type="button" title="Ver postulantes del aula ${r.aula}">${r.aula}</button></td>`;
   };
 
   const escHtml = (s) =>
@@ -394,6 +394,18 @@
   tbody.addEventListener('click', (e) => {
     const btn = e.target.closest('.perfil-link');
     if (!btn) return;
+    // Aula de la fila → filtra solo por sede, local y aula; limpia el resto
+    if (btn.dataset.aula) {
+      const l = LOCALES[parseInt(btn.dataset.aulaLocal, 10)];
+      setSede(l.sede, l.idx, parseInt(btn.dataset.aula, 10));
+      searchEl.value = '';
+      perfilEl.value = '';
+      condEl.value = '';
+      kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === ''));
+      applyFilters();
+      $('res-filters').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
     // Sede/local de la fila → filtra los postulantes de ese local
     if (btn.dataset.local) {
       const l = LOCALES[parseInt(btn.dataset.local, 10)];
