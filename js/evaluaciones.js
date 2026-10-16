@@ -7,7 +7,6 @@
 
   const $ = (id) => document.getElementById(id);
 
-  /* ---------- Normalización para búsqueda ---------- */
   const norm = (s) =>
     String(s || '')
       .normalize('NFD')
@@ -15,46 +14,90 @@
       .toLowerCase()
       .trim();
 
-  /* ---------- Condición general: la peor de las etapas disponibles ---------- */
-  function overallCond(ptC, paC) {
-    const vals = [ptC, paC].filter((v) => v !== null && v !== undefined);
+  /* ---------- Ponderaciones según las bases ---------- */
+  const W = { pt: 0.30, pa: 0.20, ec: 0.30, ep: 0.20 };
+
+  /* ---------- Condición general: la peor de las etapas con resultado ---------- */
+  function overallCond(conds) {
+    const vals = conds.filter((v) => v !== null && v !== undefined);
     if (vals.length === 0) return null;
     return Math.max(...vals);
   }
 
-  /* ---------- Mapa de nombres desde resultados de inscripción ---------- */
-  // Los PDF de evaluaciones omiten el nombre para los NO CALIFICA; lo completamos desde
-  // window.CPM_RESULTADOS (resultados-data.js), que sí tiene todos los nombres.
-  const nombrePorDni = new Map();
+  /* ---------- Acumulado ponderado de las etapas disponibles ---------- */
+  function calcAcumulado(ptScore, paScore, ecScore, epScore) {
+    let acc = null;
+    if (ptScore !== null) acc = (acc ?? 0) + ptScore * W.pt;
+    if (paScore !== null) acc = (acc ?? 0) + paScore * W.pa;
+    if (ecScore !== null) acc = (acc ?? 0) + ecScore * W.ec;
+    if (epScore !== null) acc = (acc ?? 0) + epScore * W.ep;
+    return acc;
+  }
+
+  /* ---------- Mapa de nombres y perfiles desde inscripción ---------- */
+  // Los PDF de evaluaciones omiten el nombre para los NO CALIFICA.
+  // También necesitamos saber quiénes CALIFICAN en inscripción para detectar
+  // a los que no se presentaron a la evaluación.
+  const nombrePorDni    = new Map();
+  const inscritosCalif  = new Map(); // dni → perfil, de los CALIFICA en inscripción
+
   if (window.CPM_RESULTADOS && Array.isArray(window.CPM_RESULTADOS.data)) {
     window.CPM_RESULTADOS.data.forEach((r) => {
-      if (r[1]) nombrePorDni.set(String(r[0]).padStart(8, '0'), r[1]);
+      const dni = String(r[0]).padStart(8, '0');
+      if (r[1]) nombrePorDni.set(dni, r[1]);
+      if (r[3] === 0) inscritosCalif.set(dni, r[2]); // cond 0 = CALIFICA
     });
   }
 
-  /* ---------- Preprocesar datos ---------- */
-  // Cada registro en D.data: [dni, nombre, perfil, pt_puntaje, pt_cond, pa_puntaje, pa_cond]
-  // cond: 0 = CALIFICA, 1 = NO CALIFICA, 2 = DESCALIFICA
-  const records = D.data.map((r) => {
-    const dniStr = String(r[0]).padStart(8, '0');
-    const nombre = r[1] || nombrePorDni.get(dniStr) || null;
-    return {
-      dni:     dniStr,
-      nombre,
-      perfil:  r[2],
-      ptScore: r[3] != null ? r[3] : null,
-      ptCond:  r[4] != null ? r[4] : null,
-      paScore: r[5] != null ? r[5] : null,
-      paCond:  r[6] != null ? r[6] : null,
-      cond:    overallCond(r[4], r[6]),
-      _q:      norm(nombre) + ' ' + dniStr,
-    };
+  /* ---------- Registros evaluados ---------- */
+  // D.data: [dni, nombre, perfil, pt_score, pt_cond, pa_score, pa_cond,
+  //          ec_score?, ec_cond?, ep_score?, ep_cond?]
+  const evalDniSet = new Set();
+  const records    = [];
+
+  D.data.forEach((r) => {
+    const dniStr  = String(r[0]).padStart(8, '0');
+    evalDniSet.add(dniStr);
+
+    const nombre  = r[1] || nombrePorDni.get(dniStr) || null;
+    const ptScore = r[3]  != null ? r[3]  : null;
+    const ptCond  = r[4]  != null ? r[4]  : null;
+    const paScore = r[5]  != null ? r[5]  : null;
+    const paCond  = r[6]  != null ? r[6]  : null;
+    const ecScore = r[7]  != null ? r[7]  : null;
+    const ecCond  = r[8]  != null ? r[8]  : null;
+    const epScore = r[9]  != null ? r[9]  : null;
+    const epCond  = r[10] != null ? r[10] : null;
+
+    records.push({
+      dni: dniStr, nombre, perfil: r[2],
+      ptScore, ptCond, paScore, paCond,
+      ecScore, ecCond, epScore, epCond,
+      acumulado: calcAcumulado(ptScore, paScore, ecScore, epScore),
+      cond:      overallCond([ptCond, paCond, ecCond, epCond]),
+      _q:        norm(nombre) + ' ' + dniStr,
+    });
+  });
+
+  /* ---------- Agregar los que no se presentaron ---------- */
+  // CALIFICA en inscripción pero sin ningún registro de evaluación → cond 3
+  inscritosCalif.forEach((perfil, dniStr) => {
+    if (evalDniSet.has(dniStr)) return;
+    const nombre = nombrePorDni.get(dniStr) || null;
+    records.push({
+      dni: dniStr, nombre, perfil,
+      ptScore: null, ptCond: null, paScore: null, paCond: null,
+      ecScore: null, ecCond: null, epScore: null, epCond: null,
+      acumulado: null, cond: 3,
+      _q: norm(nombre) + ' ' + dniStr,
+    });
   });
 
   /* ---------- KPIs ---------- */
-  let nOk = 0, nWarn = 0, nDanger = 0;
+  let nOk = 0, nWarn = 0, nDanger = 0, nNP = 0;
   records.forEach((r) => {
-    if (r.cond === 2)      nDanger++;
+    if      (r.cond === 3) nNP++;
+    else if (r.cond === 2) nDanger++;
     else if (r.cond === 1) nWarn++;
     else                   nOk++;
   });
@@ -64,23 +107,28 @@
   $('kpi-ok').textContent     = fmt(nOk);
   $('kpi-warn').textContent   = fmt(nWarn);
   $('kpi-danger').textContent = fmt(nDanger);
+  $('kpi-np').textContent     = fmt(nNP);
 
   /* ---------- Texto de publicación ---------- */
   (function buildPubInfo() {
     const pub = D.pub || {};
-    const ptDate = pub.pt || null;
-    const paDate = pub.pa || null;
+    const etapas = [pub.pt && 'PT', pub.pa && 'PA', pub.ec && 'EC', pub.ep && 'EP'].filter(Boolean);
+    const fechas = [...new Set([pub.pt, pub.pa, pub.ec, pub.ep].filter(Boolean))];
     let text = '';
-    if (ptDate && paDate && ptDate === paDate) {
-      text = `Publicado el ${ptDate}`;
+    if (!etapas.length) {
+      text = 'CPM N° 06-2026-CG';
+    } else if (fechas.length === 1) {
+      text = `${etapas.join(' y ')} publicados el ${fechas[0]} · CPM N° 06-2026-CG`;
     } else {
       const parts = [];
-      if (ptDate) parts.push(`PT publicado el ${ptDate}`);
-      if (paDate) parts.push(`PA publicado el ${paDate}`);
-      text = parts.join(' · ');
+      if (pub.pt) parts.push(`PT: ${pub.pt}`);
+      if (pub.pa) parts.push(`PA: ${pub.pa}`);
+      if (pub.ec) parts.push(`EC: ${pub.ec}`);
+      if (pub.ep) parts.push(`EP: ${pub.ep}`);
+      text = parts.join(' · ') + ' · CPM N° 06-2026-CG';
     }
     const el = $('eval-pub-info');
-    if (el && text) el.textContent = text + ' · CPM N° 06-2026-CG';
+    if (el) el.textContent = text;
   })();
 
   /* ---------- Datalist de perfiles ---------- */
@@ -105,13 +153,12 @@
     dl.appendChild(fragment);
   })();
 
-  /* ---------- Lookup de perfiles (data.js) ---------- */
+  /* ---------- Lookup de perfiles ---------- */
   const perfilesMap = {};
   if (window.CPM_DATA) {
     window.CPM_DATA.perfiles.forEach((p) => { perfilesMap[parseInt(p.id, 10)] = p; });
   }
 
-  /* ---------- Extraer número de perfil desde texto libre ---------- */
   function perfilIdFromInput(val) {
     if (!val || !val.trim()) return null;
     const n = parseInt(val, 10);
@@ -184,6 +231,7 @@
     '<span class="tag tag--ok">CALIFICA</span>',
     '<span class="tag tag--warn">NO CALIFICA</span>',
     '<span class="tag tag--danger">DESCALIFICA</span>',
+    '<span class="tag">NO SE PRESENTÓ</span>',
   ];
 
   function scoreCell(score, cond) {
@@ -199,8 +247,8 @@
 
     countEl.textContent =
       total === records.length
-        ? `${fmt(total)} evaluados`
-        : `${fmt(total)} de ${fmt(records.length)} evaluados`;
+        ? `${fmt(total)} postulantes`
+        : `${fmt(total)} de ${fmt(records.length)} postulantes`;
 
     liveCount.innerHTML = total > 0
       ? `<strong>${fmt(total)}</strong> resultado${total !== 1 ? 's' : ''}`
@@ -224,6 +272,9 @@
               <td class="num"><button class="perfil-link" data-id="${r.perfil}" type="button" title="Ver requisitos del perfil N° ${r.perfil}">${r.perfil}</button></td>
               ${scoreCell(r.ptScore, r.ptCond)}
               ${scoreCell(r.paScore, r.paCond)}
+              ${scoreCell(r.ecScore, r.ecCond)}
+              ${scoreCell(r.epScore, r.epCond)}
+              <td class="num">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}</td>
               <td>${r.cond !== null ? COND_TAG[r.cond] : '<span class="muted">—</span>'}</td>
             </tr>`
         )
@@ -277,7 +328,6 @@
     });
   });
 
-  // Sincronizar KPI activo cuando cambia el select manualmente
   condEl.addEventListener('change', () => {
     const val = condEl.value;
     kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === val));
@@ -320,7 +370,6 @@
     render();
   });
 
-  // Clic en número de perfil de la tabla → filtra por ese perfil
   tbody.addEventListener('click', (e) => {
     const btn = e.target.closest('.perfil-link');
     if (!btn) return;

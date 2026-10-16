@@ -42,7 +42,7 @@
   <div class="res-kpis" id="res-kpis">
     <button class="res-kpi res-kpi--all is-active" data-cond="" type="button">
       <span class="res-kpi__value" id="kpi-total">—</span>
-      <span class="res-kpi__label">Total evaluados</span>
+      <span class="res-kpi__label">Total postulantes</span>
     </button>
     <button class="res-kpi res-kpi--ok" data-cond="0" type="button">
       <span class="res-kpi__value" id="kpi-ok">—</span>
@@ -55,6 +55,10 @@
     <button class="res-kpi res-kpi--danger" data-cond="2" type="button">
       <span class="res-kpi__value" id="kpi-danger">—</span>
       <span class="res-kpi__label">DESCALIFICA</span>
+    </button>
+    <button class="res-kpi" data-cond="3" type="button">
+      <span class="res-kpi__value" id="kpi-np">—</span>
+      <span class="res-kpi__label">NO SE PRESENTÓ</span>
     </button>
   </div>
 
@@ -86,6 +90,7 @@
           <option value="0">CALIFICA</option>
           <option value="1">NO CALIFICA</option>
           <option value="2">DESCALIFICA</option>
+          <option value="3">NO SE PRESENTÓ</option>
         </select>
       </div>
 
@@ -131,9 +136,12 @@
           <th class="num" style="width:3.5rem">#</th>
           <th style="width:7rem">DNI</th>
           <th>Apellidos y Nombres</th>
-          <th class="num" style="width:5rem">Perfil</th>
-          <th class="num" style="width:9rem">PT – Conocimientos</th>
-          <th class="num" style="width:9rem">PA – Aptitud</th>
+          <th class="num" style="width:4.5rem">Perfil</th>
+          <th class="num" style="width:8rem">PT – Conocimientos (30%)</th>
+          <th class="num" style="width:8rem">PA – Aptitud (20%)</th>
+          <th class="num" style="width:8rem">EC – Curricular (30%)</th>
+          <th class="num" style="width:8rem">EP – Entrevista (20%)</th>
+          <th class="num" style="width:8rem">Puntaje acumulado</th>
           <th style="width:9rem">Condición</th>
         </tr>
       </thead>
