@@ -22,21 +22,32 @@
     return Math.max(...vals);
   }
 
+  /* ---------- Mapa de nombres desde resultados de inscripción ---------- */
+  // Los PDF de evaluaciones omiten el nombre para los NO CALIFICA; lo completamos desde
+  // window.CPM_RESULTADOS (resultados-data.js), que sí tiene todos los nombres.
+  const nombrePorDni = new Map();
+  if (window.CPM_RESULTADOS && Array.isArray(window.CPM_RESULTADOS.data)) {
+    window.CPM_RESULTADOS.data.forEach((r) => {
+      if (r[1]) nombrePorDni.set(String(r[0]).padStart(8, '0'), r[1]);
+    });
+  }
+
   /* ---------- Preprocesar datos ---------- */
   // Cada registro en D.data: [dni, nombre, perfil, pt_puntaje, pt_cond, pa_puntaje, pa_cond]
   // cond: 0 = CALIFICA, 1 = NO CALIFICA, 2 = DESCALIFICA
   const records = D.data.map((r) => {
     const dniStr = String(r[0]).padStart(8, '0');
+    const nombre = r[1] || nombrePorDni.get(dniStr) || null;
     return {
       dni:     dniStr,
-      nombre:  r[1],
+      nombre,
       perfil:  r[2],
       ptScore: r[3] != null ? r[3] : null,
       ptCond:  r[4] != null ? r[4] : null,
       paScore: r[5] != null ? r[5] : null,
       paCond:  r[6] != null ? r[6] : null,
       cond:    overallCond(r[4], r[6]),
-      _q:      norm(r[1]) + ' ' + dniStr,
+      _q:      norm(nombre) + ' ' + dniStr,
     };
   });
 
