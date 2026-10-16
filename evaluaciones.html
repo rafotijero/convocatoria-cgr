@@ -11,6 +11,13 @@
     #res-table tr.is-winning { background-color: rgba(34, 197, 94, .07); }
     #res-table tr.is-winning > td:first-child { box-shadow: inset 3px 0 0 #22c55e; }
     .eval-ganando { font-size: .72em; }
+    .eval-etapas { margin-top: 14px; }
+    .eval-etapa { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+    .eval-etapa legend { padding: 0; margin-bottom: 6px; }
+    .eval-rango { display: grid; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; font-size: .85rem; color: var(--ink-2); }
+    .eval-presets { display: flex; flex-wrap: wrap; gap: 8px; }
+    .eval-presets .pill { padding: 5px 12px; background: var(--surface); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
+    .eval-presets .pill.is-active { background: var(--accent-soft); color: var(--accent-ink); box-shadow: inset 0 0 0 1px var(--accent); }
   </style>
 </head>
 <body>
@@ -100,6 +107,54 @@
       </div>
 
     </div>
+
+    <!-- Filtros por etapa -->
+    <div class="res-filters__row eval-etapas">
+      <fieldset class="eval-etapa">
+        <legend class="field__label">PT – Conocimientos</legend>
+        <select class="select" id="f-pt-cond" aria-label="Condición en conocimientos">
+          <option value="">Cualquier condición</option>
+          <option value="0">CALIFICA</option>
+          <option value="1">NO CALIFICA</option>
+          <option value="2">DESCALIFICA</option>
+          <option value="3">NO SE PRESENTÓ</option>
+        </select>
+        <div class="eval-rango">
+          <label for="f-pt-min">Puntaje de</label>
+          <input class="input" id="f-pt-min" type="number" min="0" max="20" step="0.5" inputmode="decimal" placeholder="0">
+          <label for="f-pt-max">a</label>
+          <input class="input" id="f-pt-max" type="number" min="0" max="20" step="0.5" inputmode="decimal" placeholder="20">
+        </div>
+      </fieldset>
+
+      <fieldset class="eval-etapa">
+        <legend class="field__label">PA – Aptitud</legend>
+        <select class="select" id="f-pa-cond" aria-label="Condición en aptitud">
+          <option value="">Cualquier condición</option>
+          <option value="0">CALIFICA</option>
+          <option value="1">NO CALIFICA</option>
+          <option value="none">Sin evaluar (no pasó PT)</option>
+        </select>
+        <div class="eval-rango">
+          <label for="f-pa-min">Puntaje de</label>
+          <input class="input" id="f-pa-min" type="number" min="0" max="20" step="0.5" inputmode="decimal" placeholder="0">
+          <label for="f-pa-max">a</label>
+          <input class="input" id="f-pa-max" type="number" min="0" max="20" step="0.5" inputmode="decimal" placeholder="20">
+        </div>
+      </fieldset>
+
+      <div class="field field--full">
+        <span class="field__label">Consultas rápidas</span>
+        <div class="eval-presets" id="eval-presets">
+          <button class="pill" type="button" data-preset="ptmin=20">20 en conocimientos</button>
+          <button class="pill" type="button" data-preset="pamin=20">20 en aptitud</button>
+          <button class="pill" type="button" data-preset="pt=0&amp;pa=1">Pasó PT y no PA</button>
+          <button class="pill" type="button" data-preset="pt=1&amp;ptmin=11&amp;ptmax=11">Se quedó en 11 en PT</button>
+          <button class="pill" type="button" data-preset="ganando=1">Van ganando</button>
+        </div>
+      </div>
+    </div>
+
     <div class="res-filters__foot">
       <span class="filter-panel__live" id="live-count" aria-live="polite"></span>
       <button class="btn btn--text btn--sm" type="button" id="clear-filters">Limpiar filtros</button>

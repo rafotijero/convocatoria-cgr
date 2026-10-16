@@ -206,6 +206,13 @@
   const searchEl   = $('f-search');
   const perfilEl   = $('f-perfil');
   const condEl     = $('f-cond');
+  const ptCondEl   = $('f-pt-cond');
+  const ptMinEl    = $('f-pt-min');
+  const ptMaxEl    = $('f-pt-max');
+  const paCondEl   = $('f-pa-cond');
+  const paMinEl    = $('f-pa-min');
+  const paMaxEl    = $('f-pa-max');
+  const presetEls  = document.querySelectorAll('#eval-presets [data-preset]');
   const sortEl     = $('sort');
   const clearBtn   = $('clear-filters');
   const countEl    = $('res-count');
@@ -235,18 +242,99 @@
     perfilCard.hidden = false;
   }
 
+  /* ---------- Estado de filtros ↔ parámetros de URL ---------- */
+  // Los campos de la vista se leen y escriben como parámetros (?pt=0&pa=1&ptmin=20…),
+  // así las consultas rápidas, la URL y el formulario comparten una sola representación.
+  // La búsqueda por nombre o DNI queda fuera para no dejar datos personales en enlaces.
+  let soloGanando = false;
+  const CAMPOS = {
+    cond:  condEl,
+    pt:    ptCondEl,
+    ptmin: ptMinEl,
+    ptmax: ptMaxEl,
+    pa:    paCondEl,
+    pamin: paMinEl,
+    pamax: paMaxEl,
+  };
+
+  function getParams() {
+    const p = new URLSearchParams();
+    const perfilV = perfilIdFromInput(perfilEl.value);
+    if (perfilV !== null) p.set('perfil', perfilV);
+    Object.entries(CAMPOS).forEach(([k, el]) => { if (el.value.trim() !== '') p.set(k, el.value.trim()); });
+    if (soloGanando) p.set('ganando', '1');
+    return p;
+  }
+
+  function setParams(p) {
+    const perfil = p.get('perfil');
+    if (perfil) {
+      const id    = parseInt(perfil, 10);
+      const opts  = Array.from(document.querySelectorAll('#dl-perfiles option'));
+      const match = opts.find((o) => parseInt(o.value, 10) === id);
+      perfilEl.value = match ? match.value : perfil;
+    } else {
+      perfilEl.value = '';
+    }
+    Object.entries(CAMPOS).forEach(([k, el]) => { el.value = p.get(k) || ''; });
+    soloGanando = p.get('ganando') === '1';
+    syncKpis();
+  }
+
+  function syncKpis() {
+    kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === condEl.value));
+  }
+
+  // Marca la consulta rápida que coincide exactamente con los filtros actuales
+  function syncPresets(current) {
+    const cur = new URLSearchParams(current);
+    cur.delete('perfil');
+    cur.sort();
+    presetEls.forEach((b) => {
+      const pre = new URLSearchParams(b.dataset.preset);
+      pre.sort();
+      b.classList.toggle('is-active', pre.toString() === cur.toString());
+    });
+  }
+
+  const num = (el) => {
+    const v = el.value.trim();
+    if (v === '') return null;
+    const n = parseFloat(v.replace(',', '.'));
+    return isNaN(n) ? null : n;
+  };
+
+  // Condición de una etapa: '' cualquiera, 'none' sin registro, o el código numérico
+  function matchEtapa(score, cond, condV, min, max) {
+    if (condV === 'none') { if (cond !== null) return false; }
+    else if (condV !== '' && cond !== parseInt(condV, 10)) return false;
+    if (min !== null && (score === null || score < min)) return false;
+    if (max !== null && (score === null || score > max)) return false;
+    return true;
+  }
+
   /* ---------- Filtrar ---------- */
   function applyFilters() {
     const q       = norm(searchEl.value);
     const perfilV = perfilIdFromInput(perfilEl.value);
     const condV   = condEl.value;
+    const ptCondV = ptCondEl.value, ptMin = num(ptMinEl), ptMax = num(ptMaxEl);
+    const paCondV = paCondEl.value, paMin = num(paMinEl), paMax = num(paMaxEl);
 
     filtered = records.filter((r) => {
       if (q && !r._q.includes(q)) return false;
       if (perfilV !== null && r.perfil !== perfilV) return false;
       if (condV !== '' && r.cond !== parseInt(condV, 10)) return false;
+      if (!matchEtapa(r.ptScore, r.ptCond, ptCondV, ptMin, ptMax)) return false;
+      if (!matchEtapa(r.paScore, r.paCond, paCondV, paMin, paMax)) return false;
+      if (soloGanando && !r.ganando) return false;
       return true;
     });
+
+    const params = getParams();
+    syncPresets(params);
+    const qs = params.toString();
+    history.replaceState(null, '', qs ? `?${qs}` : location.pathname);
 
     // Ordenar: nulls siempre al final
     const sk = sortEl ? sortEl.value : 'dni';
@@ -409,11 +497,26 @@
     });
   }
 
+  [ptCondEl, paCondEl].forEach((el) => el.addEventListener('change', applyFilters));
+
+  let rangoTimer;
+  [ptMinEl, ptMaxEl, paMinEl, paMaxEl].forEach((el) => el.addEventListener('input', () => {
+    clearTimeout(rangoTimer);
+    rangoTimer = setTimeout(applyFilters, 220);
+  }));
+
+  // Consulta rápida: reemplaza los filtros (conservando el perfil); un segundo clic la quita
+  presetEls.forEach((b) => b.addEventListener('click', () => {
+    const p = b.classList.contains('is-active') ? new URLSearchParams() : new URLSearchParams(b.dataset.preset);
+    const perfilV = perfilIdFromInput(perfilEl.value);
+    if (perfilV !== null) p.set('perfil', perfilV);
+    setParams(p);
+    applyFilters();
+  }));
+
   function clearFilters() {
     searchEl.value = '';
-    perfilEl.value = '';
-    condEl.value   = '';
-    kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === ''));
+    setParams(new URLSearchParams());
   }
 
   clearBtn.addEventListener('click', () => { clearFilters(); applyFilters(); });
@@ -447,19 +550,6 @@
   });
 
   /* ---------- Parámetros de URL ---------- */
-  const params = new URLSearchParams(location.search);
-  const urlPerfil = params.get('perfil');
-  if (urlPerfil) {
-    const id   = parseInt(urlPerfil, 10);
-    const opts = Array.from(document.querySelectorAll('#dl-perfiles option'));
-    const match = opts.find((o) => parseInt(o.value, 10) === id);
-    perfilEl.value = match ? match.value : urlPerfil;
-  }
-  const urlCond = params.get('cond');
-  if (urlCond !== null) {
-    condEl.value = urlCond;
-    kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === urlCond));
-  }
-
+  setParams(new URLSearchParams(location.search));
   applyFilters();
 })();
