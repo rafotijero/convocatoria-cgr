@@ -342,6 +342,7 @@
           <div><dt>Exp. específica</dt><dd>${years(p.exp.funcionAnios)}</dd></div>
         </dl>
         <a class="pcard__postulantes" href="resultados.html?perfil=${p.id}" data-postulantes tabindex="0">Ver postulantes →</a>
+        <a class="pcard__postulantes" href="evaluaciones.html?perfil=${p.id}" data-resultados tabindex="0">Ver resultados →</a>
       </article>`).join('');
   }
 
@@ -562,6 +563,7 @@
   resultsEl.addEventListener('click', (e) => {
     if (e.target.closest('[data-clear]')) { clearAll(); return; }
     if (e.target.closest('[data-postulantes]')) return;
+    if (e.target.closest('[data-resultados]')) return;
     const card = e.target.closest('[data-id]');
     if (card) openDetail(card.dataset.id);
   });

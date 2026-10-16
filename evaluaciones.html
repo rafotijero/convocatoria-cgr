@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resultados de evaluaciones · CPM N° 06-2026-CG</title>
+  <meta name="description" content="Resultados de las etapas de evaluación del Concurso Público de Méritos N° 06-2026-CG. Consulta tu puntaje y condición en la Prueba de Conocimientos (PT) y la Prueba de Aptitud (PA).">
+  <script src="js/tema.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true">CGR</span>
+      <span class="brand__text">
+        <span class="brand__title">CPM N° 06-2026-CG</span>
+        <span class="brand__sub">Fortalecimiento de los Órganos y Unidades Orgánicas</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a class="nav__link" href="index.html">Bases</a>
+      <a class="nav__link" href="dashboard.html">Perfiles</a>
+      <a class="nav__link" href="resultados.html">Inscripción</a>
+      <a class="nav__link" href="evaluaciones.html" aria-current="page">Evaluaciones</a>
+    </nav>
+    <button class="icon-btn" id="theme-toggle" type="button" aria-label="Cambiar tema"></button>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="dash-head">
+    <div>
+      <h1>Resultados de evaluaciones</h1>
+      <p class="view__intro" id="eval-pub-info">CPM N° 06-2026-CG</p>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="res-kpis" id="res-kpis">
+    <button class="res-kpi res-kpi--all is-active" data-cond="" type="button">
+      <span class="res-kpi__value" id="kpi-total">—</span>
+      <span class="res-kpi__label">Total evaluados</span>
+    </button>
+    <button class="res-kpi res-kpi--ok" data-cond="0" type="button">
+      <span class="res-kpi__value" id="kpi-ok">—</span>
+      <span class="res-kpi__label">CALIFICA</span>
+    </button>
+    <button class="res-kpi res-kpi--warn" data-cond="1" type="button">
+      <span class="res-kpi__value" id="kpi-warn">—</span>
+      <span class="res-kpi__label">NO CALIFICA</span>
+    </button>
+    <button class="res-kpi res-kpi--danger" data-cond="2" type="button">
+      <span class="res-kpi__value" id="kpi-danger">—</span>
+      <span class="res-kpi__label">DESCALIFICA</span>
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card res-filters" id="res-filters">
+    <div class="res-filters__row">
+
+      <div class="field field--full">
+        <label class="field__label" for="f-perfil">Perfil de puesto</label>
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="input" id="f-perfil" list="dl-perfiles" placeholder="Escribe el número o nombre del perfil…" autocomplete="off" enterkeyhint="search">
+          <datalist id="dl-perfiles"></datalist>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-search">Buscar por nombre o DNI</label>
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="input" id="f-search" type="search" placeholder="Apellidos, nombres o número de DNI…" autocomplete="off" enterkeyhint="search">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="f-cond">Condición</label>
+        <select class="select" id="f-cond">
+          <option value="">Todas las condiciones</option>
+          <option value="0">CALIFICA</option>
+          <option value="1">NO CALIFICA</option>
+          <option value="2">DESCALIFICA</option>
+        </select>
+      </div>
+
+    </div>
+    <div class="res-filters__foot">
+      <span class="filter-panel__live" id="live-count" aria-live="polite"></span>
+      <button class="btn btn--text btn--sm" type="button" id="clear-filters">Limpiar filtros</button>
+    </div>
+  </div>
+
+  <!-- Barra de resultados -->
+  <div class="results-bar" id="results-top">
+    <div class="results-bar__count" id="res-count" aria-live="polite"></div>
+    <div class="results-bar__tools">
+      <label class="sr-only" for="per-page">Filas por página</label>
+      <select class="select" id="per-page">
+        <option value="50">50 por página</option>
+        <option value="100">100 por página</option>
+        <option value="200">200 por página</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Tarjeta del perfil seleccionado (aparece justo antes de la tabla) -->
+  <div class="res-perfil-card card" id="res-perfil-card" hidden>
+    <div class="res-perfil-card__body">
+      <button class="res-perfil-card__code" id="res-perfil-link" type="button" aria-label="Ver requisitos del perfil">
+        <span id="rpc-code"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </button>
+      <div class="res-perfil-card__main">
+        <h2 class="res-perfil-card__title" id="rpc-title"></h2>
+        <p class="res-perfil-card__meta" id="rpc-meta"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="res-table-wrap" id="res-table-wrap">
+    <table class="res-table" id="res-table">
+      <thead>
+        <tr>
+          <th class="num" style="width:3.5rem">#</th>
+          <th style="width:7rem">DNI</th>
+          <th>Apellidos y Nombres</th>
+          <th class="num" style="width:5rem">Perfil</th>
+          <th class="num" style="width:9rem">PT – Conocimientos</th>
+          <th class="num" style="width:9rem">PA – Aptitud</th>
+          <th style="width:9rem">Condición</th>
+        </tr>
+      </thead>
+      <tbody id="res-tbody"></tbody>
+    </table>
+    <div class="empty" id="res-empty" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <p>No se encontraron resultados con los filtros aplicados.</p>
+    </div>
+  </div>
+
+  <!-- Paginación -->
+  <nav class="pager" id="pager" aria-label="Paginación de resultados"></nav>
+
+</main>
+
+<!-- ============ DRAWER DE DETALLE DEL PERFIL ============ -->
+<dialog class="drawer" id="detail" aria-labelledby="d-title">
+  <div class="drawer__inner">
+    <header class="drawer__head">
+      <span class="eyebrow" id="d-code"></span>
+      <h2 id="d-title"></h2>
+      <p id="d-org"></p>
+      <div class="drawer__actions">
+        <button class="icon-btn" type="button" id="d-close" aria-label="Cerrar detalle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="drawer__tabs" role="tablist" aria-label="Secciones del perfil">
+      <button type="button" role="tab" data-tab="resumen" aria-selected="true">Resumen</button>
+      <button type="button" role="tab" data-tab="formacion" aria-selected="false">Carreras y cursos</button>
+      <button type="button" role="tab" data-tab="experiencia" aria-selected="false">Experiencia</button>
+      <button type="button" role="tab" data-tab="adicional" aria-selected="false">Detalles adicionales</button>
+      <button type="button" role="tab" data-tab="funciones" aria-selected="false">Funciones</button>
+    </div>
+    <div class="drawer__body" id="d-body" role="tabpanel" tabindex="-1"></div>
+    <footer class="drawer__foot">
+      <button class="btn btn--ghost btn--sm" type="button" id="d-prev">← Anterior</button>
+      <span class="muted num" id="d-pos" style="align-self:center;font-size:.85rem"></span>
+      <button class="btn btn--ghost btn--sm" type="button" id="d-next">Siguiente →</button>
+    </footer>
+  </div>
+</dialog>
+
+<footer class="site-footer">
+  <div class="container">
+    Resultados publicados por la Subgerencia de Políticas y Desarrollo Humano — Gerencia de Capital Humano,
+    el 15 de octubre de 2026. Ante cualquier diferencia, prevalece el documento oficial publicado por la
+    Contraloría General de la República.
+  </div>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/evaluaciones-data.js"></script>
+<script src="js/perfil-drawer.js"></script>
+<script src="js/evaluaciones.js"></script>
+</body>
+</html>
