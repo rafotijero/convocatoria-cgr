@@ -105,6 +105,12 @@
   <div class="results-bar" id="results-top">
     <div class="results-bar__count" id="res-count" aria-live="polite"></div>
     <div class="results-bar__tools">
+      <label class="sr-only" for="sort">Ordenar por</label>
+      <select class="select" id="sort">
+        <option value="dni">Ordenar por DNI</option>
+        <option value="acum-desc">Puntaje acumulado ↓</option>
+        <option value="acum-asc">Puntaje acumulado ↑</option>
+      </select>
       <label class="sr-only" for="per-page">Filas por página</label>
       <select class="select" id="per-page">
         <option value="50">50 por página</option>

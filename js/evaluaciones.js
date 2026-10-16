@@ -169,11 +169,13 @@
   let filtered = records;
   let page = 1;
   let perPage = 50;
+  let sortKey = 'dni';
 
   /* ---------- Elementos ---------- */
   const searchEl   = $('f-search');
   const perfilEl   = $('f-perfil');
   const condEl     = $('f-cond');
+  const sortEl     = $('sort');
   const clearBtn   = $('clear-filters');
   const countEl    = $('res-count');
   const liveCount  = $('live-count');
@@ -214,6 +216,23 @@
       if (condV !== '' && r.cond !== parseInt(condV, 10)) return false;
       return true;
     });
+
+    // Ordenar: nulls siempre al final
+    if (sortKey === 'acum-desc') {
+      filtered = [...filtered].sort((a, b) => {
+        if (a.acumulado === null && b.acumulado === null) return 0;
+        if (a.acumulado === null) return 1;
+        if (b.acumulado === null) return -1;
+        return b.acumulado - a.acumulado;
+      });
+    } else if (sortKey === 'acum-asc') {
+      filtered = [...filtered].sort((a, b) => {
+        if (a.acumulado === null && b.acumulado === null) return 0;
+        if (a.acumulado === null) return 1;
+        if (b.acumulado === null) return -1;
+        return a.acumulado - b.acumulado;
+      });
+    }
 
     page = 1;
     updatePerfilCard();
@@ -363,6 +382,12 @@
   }
 
   clearBtn.addEventListener('click', () => { clearFilters(); applyFilters(); });
+
+  sortEl.addEventListener('change', () => {
+    sortKey = sortEl.value;
+    page = 1;
+    applyFilters();
+  });
 
   perPageEl.addEventListener('change', () => {
     perPage = parseInt(perPageEl.value, 10);
