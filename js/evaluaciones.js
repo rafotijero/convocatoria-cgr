@@ -75,11 +75,13 @@
       ecScore, ecCond, epScore, epCond,
       acumulado: calcAcumulado(ptScore, paScore, ecScore, epScore),
       cond:      overallCond([ptCond, paCond, ecCond, epCond]),
+      ganando:   false,
       _q:        norm(nombre) + ' ' + dniStr,
     });
   });
 
   /* ---------- Agregar los que no se presentaron ---------- */
+  // (ganando siempre false para estos)
   // CALIFICA en inscripción pero sin ningún registro de evaluación → cond 3
   inscritosCalif.forEach((perfil, dniStr) => {
     if (evalDniSet.has(dniStr)) return;
@@ -88,7 +90,7 @@
       dni: dniStr, nombre, perfil,
       ptScore: null, ptCond: null, paScore: null, paCond: null,
       ecScore: null, ecCond: null, epScore: null, epCond: null,
-      acumulado: null, cond: 3,
+      acumulado: null, cond: 3, ganando: false,
       _q: norm(nombre) + ' ' + dniStr,
     });
   });
@@ -158,6 +160,31 @@
   if (window.CPM_DATA) {
     window.CPM_DATA.perfiles.forEach((p) => { perfilesMap[parseInt(p.id, 10)] = p; });
   }
+
+  /* ---------- Marcar ganadores por perfil ---------- */
+  // Por cada perfil, los N primeros CALIFICA por puntaje acumulado "van ganando",
+  // donde N = número de plazas del perfil. Los empates en el límite se incluyen todos.
+  (function markGanadores() {
+    const porPerfil = {};
+    records.forEach((r) => {
+      if (r.cond !== 0 || r.acumulado === null) return;
+      if (!porPerfil[r.perfil]) porPerfil[r.perfil] = [];
+      porPerfil[r.perfil].push(r);
+    });
+
+    Object.entries(porPerfil).forEach(([perfil, grupo]) => {
+      const p = perfilesMap[parseInt(perfil, 10)];
+      const plazas = p ? p.posiciones : 0;
+      if (!plazas) return;
+
+      const sorted    = [...grupo].sort((a, b) => b.acumulado - a.acumulado);
+      const limiteIdx = Math.min(plazas, sorted.length) - 1;
+      if (limiteIdx < 0) return;
+      const limiteScore = sorted[limiteIdx].acumulado;
+
+      grupo.forEach((r) => { if (r.acumulado >= limiteScore) r.ganando = true; });
+    });
+  })();
 
   function perfilIdFromInput(val) {
     if (!val || !val.trim()) return null;
@@ -283,8 +310,10 @@
       emptyEl.hidden  = true;
       tbody.innerHTML = slice
         .map(
-          (r, i) =>
-            `<tr>
+          (r, i) => {
+            const condHtml = r.cond !== null ? COND_TAG[r.cond] : '<span class="muted">—</span>';
+            const ganadoHtml = r.ganando ? '<br><small><span class="tag tag--ok eval-ganando">★ va ganando</span></small>' : '';
+            return `<tr${r.ganando ? ' class="is-winning"' : ''}>
               <td class="num muted">${fmt(start + i + 1)}</td>
               <td class="num">${r.dni}</td>
               <td>${escHtml(r.nombre)}</td>
@@ -294,8 +323,9 @@
               ${scoreCell(r.ecScore, r.ecCond)}
               ${scoreCell(r.epScore, r.epCond)}
               <td class="num">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}</td>
-              <td>${r.cond !== null ? COND_TAG[r.cond] : '<span class="muted">—</span>'}</td>
-            </tr>`
+              <td>${condHtml}${ganadoHtml}</td>
+            </tr>`;
+          }
         )
         .join('');
     }
