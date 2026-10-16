@@ -35,15 +35,18 @@
   }
 
   /* ---------- Mapa de nombres y perfiles desde inscripción ---------- */
-  // Los PDF de evaluaciones omiten el nombre para los NO CALIFICA.
-  // También necesitamos saber quiénes CALIFICAN en inscripción para detectar
-  // a los que no se presentaron a la evaluación.
+  // Las publicaciones de evaluaciones omiten el nombre de los NO CALIFICA, DESCALIFICA
+  // y NO SE PRESENTÓ. Los CALIFICA en inscripción sirven además de respaldo para
+  // detectar a quienes no figuren en ninguna evaluación.
+  // Clave de cruce sin ceros a la izquierda: inscripción guarda el documento como número
+  // y los carnés de extranjería (9 dígitos) no coinciden al rellenar a 8.
+  const docKey = (d) => String(d).replace(/^0+/, '');
   const nombrePorDni    = new Map();
-  const inscritosCalif  = new Map(); // dni → perfil, de los CALIFICA en inscripción
+  const inscritosCalif  = new Map(); // docKey → perfil, de los CALIFICA en inscripción
 
   if (window.CPM_RESULTADOS && Array.isArray(window.CPM_RESULTADOS.data)) {
     window.CPM_RESULTADOS.data.forEach((r) => {
-      const dni = String(r[0]).padStart(8, '0');
+      const dni = docKey(r[0]);
       if (r[1]) nombrePorDni.set(dni, r[1]);
       if (r[3] === 0) inscritosCalif.set(dni, r[2]); // cond 0 = CALIFICA
     });
@@ -57,9 +60,9 @@
 
   D.data.forEach((r) => {
     const dniStr  = String(r[0]).padStart(8, '0');
-    evalDniSet.add(dniStr);
+    evalDniSet.add(docKey(dniStr));
 
-    const nombre  = r[1] || nombrePorDni.get(dniStr) || null;
+    const nombre  = r[1] || nombrePorDni.get(docKey(dniStr)) || null;
     const ptScore = r[3]  != null ? r[3]  : null;
     const ptCond  = r[4]  != null ? r[4]  : null;
     const paScore = r[5]  != null ? r[5]  : null;
@@ -83,9 +86,11 @@
   /* ---------- Agregar los que no se presentaron ---------- */
   // (ganando siempre false para estos)
   // CALIFICA en inscripción pero sin ningún registro de evaluación → cond 3
-  inscritosCalif.forEach((perfil, dniStr) => {
-    if (evalDniSet.has(dniStr)) return;
-    const nombre = nombrePorDni.get(dniStr) || null;
+  // (los NO SE PRESENTÓ ya vienen en D.data; esto solo cubre omisiones)
+  inscritosCalif.forEach((perfil, key) => {
+    if (evalDniSet.has(key)) return;
+    const dniStr = key.padStart(8, '0');
+    const nombre = nombrePorDni.get(key) || null;
     records.push({
       dni: dniStr, nombre, perfil,
       ptScore: null, ptCond: null, paScore: null, paCond: null,
@@ -281,8 +286,9 @@
   ];
 
   function scoreCell(score, cond) {
-    if (score === null) return '<td class="num muted">—</td>';
     const tag = cond !== null ? COND_TAG[cond] : '';
+    // DESCALIFICA y NO SE PRESENTÓ no tienen puntaje, pero sí condición
+    if (score === null) return `<td class="num muted">—${tag ? `<br><small>${tag}</small>` : ''}</td>`;
     return `<td class="num eval-score">${Number(score).toFixed(2)}<br><small>${tag}</small></td>`;
   }
 

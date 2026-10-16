@@ -55,4 +55,12 @@ node tools/generar-resultados.js
 
 Cruza ambos archivos por N° de documento y código de perfil, y falla si algún postulante que CALIFICA queda sin local y aula.
 
+`js/evaluaciones-data.js` se genera a partir de los resultados de las evaluaciones de conocimientos y de aptitud (`archivos/04 Evaluaciones`):
+
+```bash
+node tools/generar-evaluaciones.js
+```
+
+Lee las tablas de los `.md` (conversión de los PDF oficiales, con todas las condiciones, incluida NO SE PRESENTÓ) y verifica cada CALIFICA contra el Excel `CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx`. Falla si hay diferencias de perfil, puntaje o condición, saltos en la numeración o puntajes incoherentes con la condición.
+
 > Resumen informativo. Ante cualquier diferencia, prevalecen los documentos oficiales publicados por la Contraloría General de la República.
