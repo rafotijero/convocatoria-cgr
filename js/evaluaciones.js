@@ -169,7 +169,6 @@
   let filtered = records;
   let page = 1;
   let perPage = 50;
-  let sortKey = 'dni';
 
   /* ---------- Elementos ---------- */
   const searchEl   = $('f-search');
@@ -218,14 +217,15 @@
     });
 
     // Ordenar: nulls siempre al final
-    if (sortKey === 'acum-desc') {
+    const sk = sortEl ? sortEl.value : 'dni';
+    if (sk === 'acum-desc') {
       filtered = [...filtered].sort((a, b) => {
         if (a.acumulado === null && b.acumulado === null) return 0;
         if (a.acumulado === null) return 1;
         if (b.acumulado === null) return -1;
         return b.acumulado - a.acumulado;
       });
-    } else if (sortKey === 'acum-asc') {
+    } else if (sk === 'acum-asc') {
       filtered = [...filtered].sort((a, b) => {
         if (a.acumulado === null && b.acumulado === null) return 0;
         if (a.acumulado === null) return 1;
@@ -350,6 +350,7 @@
   condEl.addEventListener('change', () => {
     const val = condEl.value;
     kpiEls.forEach((k) => k.classList.toggle('is-active', k.dataset.cond === val));
+    applyFilters();
   });
 
   /* ---------- Eventos ---------- */
@@ -364,8 +365,6 @@
     clearTimeout(perfilTimer);
     perfilTimer = setTimeout(applyFilters, 220);
   });
-
-  condEl.addEventListener('change', applyFilters);
 
   if (perfilLink) {
     perfilLink.addEventListener('click', () => {
@@ -383,11 +382,7 @@
 
   clearBtn.addEventListener('click', () => { clearFilters(); applyFilters(); });
 
-  sortEl.addEventListener('change', () => {
-    sortKey = sortEl.value;
-    page = 1;
-    applyFilters();
-  });
+  sortEl.addEventListener('change', applyFilters);
 
   perPageEl.addEventListener('change', () => {
     perPage = parseInt(perPageEl.value, 10);
