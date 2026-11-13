@@ -4,14 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Resultados de evaluaciones · CPM N° 06-2026-CG</title>
-  <meta name="description" content="Resultados de las etapas de evaluación del Concurso Público de Méritos N° 06-2026-CG. Consulta tu puntaje y condición en la Prueba de Conocimientos (PT) y la Prueba de Aptitud (PA).">
+  <meta name="description" content="Resultados de las etapas de evaluación del Concurso Público de Méritos N° 06-2026-CG. Consulta tu puntaje y condición en la Prueba de Conocimientos (PT), la Prueba de Aptitud (PA) y la Evaluación Curricular (EC).">
   <script src="js/tema.js"></script>
   <link rel="stylesheet" href="css/styles.css">
   <style>
     #res-table tr.is-winning { background-color: rgba(34, 197, 94, .07); }
     #res-table tr.is-winning > td:first-child { box-shadow: inset 3px 0 0 #22c55e; }
     .eval-ganando { font-size: .72em; }
-    .eval-etapas { margin-top: 14px; }
+    .eval-etapas { margin-top: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (max-width: 860px) { .eval-etapas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 480px) { .eval-etapas { grid-template-columns: 1fr; } }
     .eval-etapa { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
     .eval-etapa legend { padding: 0; margin-bottom: 6px; }
     .eval-rango { display: grid; grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; font-size: .85rem; color: var(--ink-2); }
@@ -103,6 +105,7 @@
           <option value="1">NO CALIFICA</option>
           <option value="2">DESCALIFICA</option>
           <option value="3">NO SE PRESENTÓ</option>
+          <option value="4">SIN RESULTADO EC</option>
         </select>
       </div>
 
@@ -143,12 +146,33 @@
         </div>
       </fieldset>
 
+      <fieldset class="eval-etapa">
+        <legend class="field__label">EC – Curricular</legend>
+        <select class="select" id="f-ec-cond" aria-label="Condición en curricular">
+          <option value="">Cualquier condición</option>
+          <option value="0">CALIFICA</option>
+          <option value="1">NO CALIFICA</option>
+          <option value="2">DESCALIFICA</option>
+          <option value="falta">No figura en la publicación</option>
+          <option value="none">Sin evaluar (no pasó PA)</option>
+        </select>
+        <div class="eval-rango">
+          <label for="f-ec-min">Puntaje de</label>
+          <input class="input" id="f-ec-min" type="number" min="0" max="20" step="1" inputmode="decimal" placeholder="12">
+          <label for="f-ec-max">a</label>
+          <input class="input" id="f-ec-max" type="number" min="0" max="20" step="1" inputmode="decimal" placeholder="20">
+        </div>
+      </fieldset>
+
       <div class="field field--full">
         <span class="field__label">Consultas rápidas</span>
         <div class="eval-presets" id="eval-presets">
           <button class="pill" type="button" data-preset="ptmin=20">20 en conocimientos</button>
           <button class="pill" type="button" data-preset="pamin=20">20 en aptitud</button>
+          <button class="pill" type="button" data-preset="ecmin=20">20 en curricular</button>
           <button class="pill" type="button" data-preset="pt=0&amp;pa=1">Pasó PT y no PA</button>
+          <button class="pill" type="button" data-preset="pa=0&amp;ec=1">Pasó PA y no EC</button>
+          <button class="pill" type="button" data-preset="ec=2">Descalificados en EC</button>
           <button class="pill" type="button" data-preset="pt=1&amp;ptmin=11&amp;ptmax=11">Se quedó en 11 en PT</button>
           <button class="pill" type="button" data-preset="ganando=1">Van ganando</button>
         </div>
@@ -255,9 +279,11 @@
 
 <footer class="site-footer">
   <div class="container">
-    Resultados publicados por la Subgerencia de Políticas y Desarrollo Humano — Gerencia de Capital Humano,
-    el 15 de octubre de 2026. Ante cualquier diferencia, prevalece el documento oficial publicado por la
-    Contraloría General de la República.
+    Resultados publicados por la Subgerencia de Políticas y Desarrollo Humano — Gerencia de Capital Humano:
+    conocimientos y aptitud el 15 de octubre de 2026, curricular el 12 de noviembre de 2026. El puntaje
+    acumulado suma las etapas publicadas con sus pesos y, en empate, ordena por conocimientos y luego por
+    curricular. Ante cualquier diferencia, prevalece el documento oficial publicado por la Contraloría
+    General de la República.
   </div>
 </footer>
 

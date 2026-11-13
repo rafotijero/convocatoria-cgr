@@ -25,14 +25,30 @@
   }
 
   /* ---------- Acumulado ponderado de las etapas disponibles ---------- */
+  // Redondeado a dos decimales, como el puntaje final de las bases; además evita que
+  // errores de coma flotante rompan los empates.
   function calcAcumulado(ptScore, paScore, ecScore, epScore) {
     let acc = null;
     if (ptScore !== null) acc = (acc ?? 0) + ptScore * W.pt;
     if (paScore !== null) acc = (acc ?? 0) + paScore * W.pa;
     if (ecScore !== null) acc = (acc ?? 0) + ecScore * W.ec;
     if (epScore !== null) acc = (acc ?? 0) + epScore * W.ep;
-    return acc;
+    return acc === null ? null : Math.round(acc * 100) / 100;
   }
+
+  /* ---------- Orden de mérito ---------- */
+  // Mayor acumulado; en empate, mayor puntaje en conocimientos y luego en curricular
+  // (criterios 1 y 2 de desempate de las bases). Los registros sin acumulado van al final.
+  const sc = (v) => (v === null ? -1 : v);
+  function cmpMerito(a, b) {
+    if (a.acumulado === null || b.acumulado === null) {
+      return (a.acumulado === null) - (b.acumulado === null);
+    }
+    return (b.acumulado - a.acumulado) || (sc(b.ptScore) - sc(a.ptScore)) || (sc(b.ecScore) - sc(a.ecScore));
+  }
+
+  // Calificó en aptitud pero no figura en la publicación curricular ya publicada
+  const COND_FALTA_EC = 4;
 
   /* ---------- Mapa de nombres y perfiles desde inscripción ---------- */
   // Las publicaciones de evaluaciones omiten el nombre de los NO CALIFICA, DESCALIFICA
@@ -72,12 +88,14 @@
     const epScore = r[9]  != null ? r[9]  : null;
     const epCond  = r[10] != null ? r[10] : null;
 
+    const ecFalta = Boolean(D.pub && D.pub.ec) && paCond === 0 && ecCond === null;
+
     records.push({
       dni: dniStr, nombre, perfil: r[2],
       ptScore, ptCond, paScore, paCond,
-      ecScore, ecCond, epScore, epCond,
+      ecScore, ecCond, epScore, epCond, ecFalta,
       acumulado: calcAcumulado(ptScore, paScore, ecScore, epScore),
-      cond:      overallCond([ptCond, paCond, ecCond, epCond]),
+      cond:      ecFalta ? COND_FALTA_EC : overallCond([ptCond, paCond, ecCond, epCond]),
       ganando:   false,
       _q:        norm(nombre) + ' ' + dniStr,
     });
@@ -94,7 +112,7 @@
     records.push({
       dni: dniStr, nombre, perfil,
       ptScore: null, ptCond: null, paScore: null, paCond: null,
-      ecScore: null, ecCond: null, epScore: null, epCond: null,
+      ecScore: null, ecCond: null, epScore: null, epCond: null, ecFalta: false,
       acumulado: null, cond: 3, ganando: false,
       _q: norm(nombre) + ' ' + dniStr,
     });
@@ -106,7 +124,7 @@
     if      (r.cond === 3) nNP++;
     else if (r.cond === 2) nDanger++;
     else if (r.cond === 1) nWarn++;
-    else                   nOk++;
+    else if (r.cond === 0) nOk++;
   });
 
   const fmt = (n) => n.toLocaleString('es-PE');
@@ -167,8 +185,9 @@
   }
 
   /* ---------- Marcar ganadores por perfil ---------- */
-  // Por cada perfil, los N primeros CALIFICA por puntaje acumulado "van ganando",
-  // donde N = número de plazas del perfil. Los empates en el límite se incluyen todos.
+  // Por cada perfil, los N primeros CALIFICA en orden de mérito "van ganando",
+  // donde N = número de plazas del perfil. Los empates que persisten tras los
+  // criterios de desempate disponibles se incluyen todos.
   (function markGanadores() {
     const porPerfil = {};
     records.forEach((r) => {
@@ -182,12 +201,12 @@
       const plazas = p ? p.posiciones : 0;
       if (!plazas) return;
 
-      const sorted    = [...grupo].sort((a, b) => b.acumulado - a.acumulado);
+      const sorted    = [...grupo].sort(cmpMerito);
       const limiteIdx = Math.min(plazas, sorted.length) - 1;
       if (limiteIdx < 0) return;
-      const limiteScore = sorted[limiteIdx].acumulado;
+      const limite = sorted[limiteIdx];
 
-      grupo.forEach((r) => { if (r.acumulado >= limiteScore) r.ganando = true; });
+      grupo.forEach((r) => { if (cmpMerito(r, limite) <= 0) r.ganando = true; });
     });
   })();
 
@@ -212,6 +231,9 @@
   const paCondEl   = $('f-pa-cond');
   const paMinEl    = $('f-pa-min');
   const paMaxEl    = $('f-pa-max');
+  const ecCondEl   = $('f-ec-cond');
+  const ecMinEl    = $('f-ec-min');
+  const ecMaxEl    = $('f-ec-max');
   const presetEls  = document.querySelectorAll('#eval-presets [data-preset]');
   const sortEl     = $('sort');
   const clearBtn   = $('clear-filters');
@@ -255,6 +277,9 @@
     pa:    paCondEl,
     pamin: paMinEl,
     pamax: paMaxEl,
+    ec:    ecCondEl,
+    ecmin: ecMinEl,
+    ecmax: ecMaxEl,
   };
 
   function getParams() {
@@ -320,6 +345,7 @@
     const condV   = condEl.value;
     const ptCondV = ptCondEl.value, ptMin = num(ptMinEl), ptMax = num(ptMaxEl);
     const paCondV = paCondEl.value, paMin = num(paMinEl), paMax = num(paMaxEl);
+    const ecCondV = ecCondEl.value, ecMin = num(ecMinEl), ecMax = num(ecMaxEl);
 
     filtered = records.filter((r) => {
       if (q && !r._q.includes(q)) return false;
@@ -327,6 +353,9 @@
       if (condV !== '' && r.cond !== parseInt(condV, 10)) return false;
       if (!matchEtapa(r.ptScore, r.ptCond, ptCondV, ptMin, ptMax)) return false;
       if (!matchEtapa(r.paScore, r.paCond, paCondV, paMin, paMax)) return false;
+      // En curricular, 'falta' son quienes calificaron en PA y no figuran; 'none', quienes no llegaron
+      if (ecCondV === 'falta' ? !r.ecFalta : ecCondV === 'none' && r.ecFalta) return false;
+      if (!matchEtapa(r.ecScore, r.ecCond, ecCondV === 'falta' ? '' : ecCondV, ecMin, ecMax)) return false;
       if (soloGanando && !r.ganando) return false;
       return true;
     });
@@ -339,12 +368,7 @@
     // Ordenar: nulls siempre al final
     const sk = sortEl ? sortEl.value : 'dni';
     if (sk === 'acum-desc') {
-      filtered = [...filtered].sort((a, b) => {
-        if (a.acumulado === null && b.acumulado === null) return 0;
-        if (a.acumulado === null) return 1;
-        if (b.acumulado === null) return -1;
-        return b.acumulado - a.acumulado;
-      });
+      filtered = [...filtered].sort(cmpMerito);
     } else if (sk === 'acum-asc') {
       filtered = [...filtered].sort((a, b) => {
         if (a.acumulado === null && b.acumulado === null) return 0;
@@ -371,10 +395,11 @@
     '<span class="tag tag--warn">NO CALIFICA</span>',
     '<span class="tag tag--danger">DESCALIFICA</span>',
     '<span class="tag">NO SE PRESENTÓ</span>',
+    '<span class="tag" title="Calificó en aptitud, pero no figura en la publicación oficial de la evaluación curricular">SIN RESULTADO EC</span>',
   ];
 
-  function scoreCell(score, cond) {
-    const tag = cond !== null ? COND_TAG[cond] : '';
+  function scoreCell(score, cond, falta) {
+    const tag = cond !== null ? COND_TAG[cond] : falta ? '<span class="tag" title="No figura en la publicación oficial">NO FIGURA</span>' : '';
     // DESCALIFICA y NO SE PRESENTÓ no tienen puntaje, pero sí condición
     if (score === null) return `<td class="num muted">—${tag ? `<br><small>${tag}</small>` : ''}</td>`;
     return `<td class="num eval-score">${Number(score).toFixed(2)}<br><small>${tag}</small></td>`;
@@ -414,7 +439,7 @@
               <td class="num"><button class="perfil-link" data-id="${r.perfil}" type="button" title="Ver requisitos del perfil N° ${r.perfil}">${r.perfil}</button></td>
               ${scoreCell(r.ptScore, r.ptCond)}
               ${scoreCell(r.paScore, r.paCond)}
-              ${scoreCell(r.ecScore, r.ecCond)}
+              ${scoreCell(r.ecScore, r.ecCond, r.ecFalta)}
               ${scoreCell(r.epScore, r.epCond)}
               <td class="num">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}</td>
               <td>${condHtml}${ganadoHtml}</td>
@@ -497,10 +522,10 @@
     });
   }
 
-  [ptCondEl, paCondEl].forEach((el) => el.addEventListener('change', applyFilters));
+  [ptCondEl, paCondEl, ecCondEl].forEach((el) => el.addEventListener('change', applyFilters));
 
   let rangoTimer;
-  [ptMinEl, ptMaxEl, paMinEl, paMaxEl].forEach((el) => el.addEventListener('input', () => {
+  [ptMinEl, ptMaxEl, paMinEl, paMaxEl, ecMinEl, ecMaxEl].forEach((el) => el.addEventListener('input', () => {
     clearTimeout(rangoTimer);
     rangoTimer = setTimeout(applyFilters, 220);
   }));

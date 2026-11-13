@@ -4,6 +4,9 @@
  *   - CPM_06_2026_Resultados_Evaluacion_Conocimientos.md  (PT, peso 30%) — todos los postulantes
  *   - CPM_06_2026_Resultados_Evaluación_Aptitud.md        (PA, peso 20%) — todos los evaluados
  *   - CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx     solo CALIFICA; se usa para validar
+ * Fuentes (archivos/05 Curricular):
+ *   - CPM_06_2026_Resultados_Evaluacion_Curricular.md     (EC, peso 30%) — todos los evaluados
+ *   - CPM_06_2026_Resultados_Evaluacion_Curricular.xlsx   todas las filas; se usa para validar
  * Uso: node tools/generar-evaluaciones.js
  *
  * Los .md son la conversión (OCR) de los PDF oficiales. Se toman como fuente principal porque
@@ -21,6 +24,8 @@ const ROOT   = path.resolve(__dirname, '..');
 const DIR_04 = path.join(ROOT, 'archivos', '04 Evaluaciones');
 const OUT    = path.join(ROOT, 'js', 'evaluaciones-data.js');
 const XLSX   = path.join(DIR_04, 'CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx');
+const DIR_05  = path.join(ROOT, 'archivos', '05 Curricular');
+const XLSX_EC = path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular.xlsx');
 
 const ETAPAS = {
   pt: {
@@ -35,6 +40,11 @@ const ETAPAS = {
     label: 'PA – Aptitud',
     pub: '15 de octubre de 2026',
   },
+  ec: {
+    file: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular.md'),
+    label: 'EC – Curricular',
+    pub: '12 de noviembre de 2026',
+  },
 };
 
 // 0 = CALIFICA, 1 = NO CALIFICA, 2 = DESCALIFICA, 3 = NO SE PRESENTÓ
@@ -42,6 +52,11 @@ const CONDS = ['CALIFICA', 'NO CALIFICA', 'DESCALIFICA', 'NO SE PRESENTÓ'];
 const NOTA_MINIMA = 12;
 
 const errores = [];
+const avisos  = [];
+
+// Clave de cruce sin ceros a la izquierda: un mismo carné de extranjería figura como
+// 001721841 en conocimientos y 01721841 en curricular.
+const docKey = (d) => String(d).replace(/^0+/, '');
 
 /* ---------- Parsear una fila de la tabla Markdown ---------- */
 // Con nombre:  |1|DNI|73112361|518|ABAD CERNA, BRENDA NIKOL|13|CALIFICA|
@@ -84,16 +99,44 @@ function parseRow(line) {
   };
 }
 
+/* ---------- Fila de curricular ---------- */
+// | 1 | DNI | 46678978 | ALVA CUBAS, ROCIO | 403 | 16 | CALIFICA | 2 |
+// | 4915 | DNI | 76202661 |  | 544 |  | NO CALIFICA | 85 |   (sin nombre ni puntaje)
+function parseRowEC(line) {
+  const c = line.trim().replace(/^\||\|$/g, '').split('|').map((s) => s.trim());
+  if (!/^\d+$/.test(c[0])) return null;
+  if (c.length !== 8) return { error: 'columnas inesperadas' };
+  const [n, tipo, doc, nombre, perfil, puntaje, cond] = c;
+
+  const condIdx = CONDS.indexOf(cond);
+  if (!/^(DNI|CE)$/.test(tipo))                        return { error: `tipo de documento "${tipo}"` };
+  if (!/^\d{8,9}$/.test(doc))                          return { error: `documento "${doc}"` };
+  if (!/^\d+$/.test(perfil))                           return { error: `perfil "${perfil}"` };
+  if (condIdx < 0)                                     return { error: `condición "${cond}"` };
+  if (puntaje !== '' && !/^\d+(\.\d+)?$/.test(puntaje)) return { error: `puntaje "${puntaje}"` };
+
+  return {
+    n:       parseInt(n, 10),
+    tipo,
+    dni:     doc,
+    perfil:  parseInt(perfil, 10),
+    nombre:  nombre ? nombre.replace(/\s+/g, ' ') : null,
+    puntaje: puntaje === '' ? null : parseFloat(puntaje),
+    cond:    condIdx,
+  };
+}
+
 /* ---------- Leer un .md completo → Map<dni, record> ---------- */
 function parseStage(key) {
   const cfg = ETAPAS[key];
+  const parse = key === 'ec' ? parseRowEC : parseRow;
   const byDni = new Map();
   const conteo = CONDS.map(() => 0);
   let esperado = 1;
 
   fs.readFileSync(cfg.file, 'utf8').split(/\r?\n/).forEach((line, i) => {
     if (!/^\|\s*\d/.test(line)) return;
-    const row = parseRow(line);
+    const row = parse(line);
     if (!row) return;
     const donde = `${key} línea ${i + 1}`;
     if (row.error) { errores.push(`${donde}: ${row.error} → ${line.trim()}`); return; }
@@ -103,9 +146,16 @@ function parseStage(key) {
 
     if (byDni.has(row.dni)) errores.push(`${donde}: documento duplicado ${row.dni}`);
 
-    // Coherencia puntaje ↔ condición
-    const conPuntaje = row.cond <= 1;
-    if (conPuntaje !== (row.puntaje !== null)) {
+    // Coherencia puntaje ↔ condición. En curricular solo CALIFICA lleva puntaje (12 a 20)
+    // y no existe NO SE PRESENTÓ.
+    const conPuntaje = key === 'ec' ? row.cond === 0 : row.cond <= 1;
+    if (key === 'ec' && row.cond === 3) {
+      errores.push(`${donde}: NO SE PRESENTÓ no aplica en curricular`);
+    } else if (key === 'ec' && row.cond === 0 && !row.nombre) {
+      errores.push(`${donde}: CALIFICA sin nombre`);
+    } else if (row.puntaje !== null && row.puntaje > 20) {
+      errores.push(`${donde}: puntaje ${row.puntaje} mayor que 20`);
+    } else if (conPuntaje !== (row.puntaje !== null)) {
       errores.push(`${donde}: ${CONDS[row.cond]} con puntaje "${row.puntaje ?? '-'}"`);
     } else if (conPuntaje && (row.puntaje >= NOTA_MINIMA) !== (row.cond === 0)) {
       errores.push(`${donde}: puntaje ${row.puntaje} con condición ${CONDS[row.cond]}`);
@@ -195,10 +245,35 @@ function validarExcel(key, byDni) {
   console.log(`  ${cfg.label}: ${rows.length} CALIFICA verificados contra el Excel`);
 }
 
-/* ---------- Combinar ambas etapas ---------- */
-function combine(ptMap, paMap) {
+/* ---------- Validar curricular contra su Excel (todas las filas) ---------- */
+function validarExcelEC(byDni) {
+  const rows = readSheet(readZip(XLSX_EC)('xl/worksheets/sheet1.xml'));
+  if (rows.length !== byDni.size) errores.push(`ec: ${rows.length} filas en el Excel y ${byDni.size} en el .md`);
+
+  for (const r of rows) {
+    const dni = r.C;
+    const md = byDni.get(dni);
+    const donde = `ec Excel N° ${r.A} (${dni})`;
+    if (!md) { errores.push(`${donde}: no está en el .md`); continue; }
+    const puntaje = r.F === undefined ? null : parseFloat(r.F);
+    if (md.n !== parseInt(r.A, 10))      errores.push(`${donde}: N° ${md.n} en el .md`);
+    if (md.tipo !== r.B)                 errores.push(`${donde}: tipo ${r.B} ≠ ${md.tipo}`);
+    if (md.perfil !== parseInt(r.E, 10)) errores.push(`${donde}: perfil ${r.E} ≠ ${md.perfil}`);
+    if (md.puntaje !== puntaje)          errores.push(`${donde}: puntaje ${r.F} ≠ ${md.puntaje}`);
+    if (CONDS[md.cond] !== r.G)          errores.push(`${donde}: condición ${r.G} ≠ ${CONDS[md.cond]}`);
+    if ((md.nombre || '') !== (r.D || '')) errores.push(`${donde}: nombre "${r.D}" ≠ "${md.nombre}"`);
+  }
+  console.log(`  ${ETAPAS.ec.label}: ${rows.length} filas verificadas contra el Excel`);
+}
+
+/* ---------- Combinar las etapas ---------- */
+function combine(ptMap, paMap, ecMap) {
   const allDnis = new Set([...ptMap.keys(), ...paMap.keys()]);
   const data = [];
+
+  // Curricular se cruza por docKey; se conserva el documento tal como figura en conocimientos
+  const ecPorKey = new Map([...ecMap.values()].map((r) => [docKey(r.dni), r]));
+  const ecUsados = new Set();
 
   for (const dni of allDnis) {
     const pt = ptMap.get(dni) || null;
@@ -209,16 +284,32 @@ function combine(ptMap, paMap) {
     if (pt && pt.cond === 0 && !pa) errores.push(`pt: CALIFICA ${dni} no figura en aptitud`);
 
     const base = pt || pa;
-    // [dni, nombre, perfil, pt_score, pt_cond, pa_score, pa_cond]
+    const ec = ecPorKey.get(docKey(dni)) || null;
+    if (ec) {
+      ecUsados.add(docKey(dni));
+      if (!pa || pa.cond !== 0) errores.push(`ec: ${ec.dni} figura en curricular sin calificar en aptitud`);
+      if (ec.perfil !== base.perfil) errores.push(`${dni}: perfil ${base.perfil} (PT) ≠ ${ec.perfil} (EC)`);
+    } else if (pa && pa.cond === 0) {
+      // La publicación oficial omite a algunos CALIFICA de aptitud: no se les asigna condición
+      avisos.push(`${dni} (perfil ${pa.perfil}, ${pa.nombre}) calificó en aptitud y no figura en curricular`);
+    }
+
+    // [dni, nombre, perfil, pt_score, pt_cond, pa_score, pa_cond, ec_score, ec_cond]
     data.push([
       dni,
-      (pt && pt.nombre) || (pa && pa.nombre) || null,
+      (pt && pt.nombre) || (pa && pa.nombre) || (ec && ec.nombre) || null,
       base.perfil,
       pt ? pt.puntaje : null,
       pt ? pt.cond    : null,
       pa ? pa.puntaje : null,
       pa ? pa.cond    : null,
+      ec ? ec.puntaje : null,
+      ec ? ec.cond    : null,
     ]);
+  }
+
+  for (const [key, ec] of ecPorKey) {
+    if (!ecUsados.has(key)) errores.push(`ec: ${ec.dni} no figura en conocimientos ni aptitud`);
   }
 
   data.sort((a, b) => a[0].localeCompare(b[0]));
@@ -231,10 +322,12 @@ function main() {
 
   const ptMap = parseStage('pt');
   const paMap = parseStage('pa');
+  const ecMap = parseStage('ec');
   validarExcel('pt', ptMap);
   validarExcel('pa', paMap);
+  validarExcelEC(ecMap);
 
-  const data = combine(ptMap, paMap);
+  const data = combine(ptMap, paMap, ecMap);
 
   if (errores.length) {
     console.error(`\n${errores.length} error(es); no se escribió el archivo:`);
@@ -243,13 +336,19 @@ function main() {
     process.exit(1);
   }
 
+  if (avisos.length) {
+    console.warn(`\n${avisos.length} aviso(s):`);
+    avisos.forEach((a) => console.warn('  ' + a));
+    console.warn('');
+  }
+
   console.log(`  Total combinado: ${data.length} postulantes`);
 
   const payload = {
     pub: {
       pt: ETAPAS.pt.pub,
       pa: ETAPAS.pa.pub,
-      ec: null,
+      ec: ETAPAS.ec.pub,
       ep: null,
     },
     data,
