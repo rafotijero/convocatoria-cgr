@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cambios en la evaluación curricular · CPM N° 06-2026-CG</title>
+  <meta name="description" content="Cómo cambiaron los resultados de la evaluación curricular del CPM N° 06-2026-CG entre la publicación del 12 y la del 17 de noviembre de 2026: perfiles con más cambios, favorecidos y perjudicados.">
+  <script src="js/tema.js"></script>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .cmb-kpis { margin-top: 16px; }
+    .cmb-kpi--ok .kpi__value { color: var(--ok); }
+    .cmb-kpi--danger .kpi__value { color: var(--danger); }
+    .cmb-charts .hbar { grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) 3rem; }
+    @media (max-width: 560px) { .cmb-charts .hbar { grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) 2.5rem; } }
+    .cmb-tabs { margin-top: 24px; }
+    .cmb-filters { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) auto; gap: 12px 16px; align-items: end; padding: 16px 18px; margin-top: 12px; }
+    @media (max-width: 760px) { .cmb-filters { grid-template-columns: 1fr; } }
+    .cmb-filters .check { min-height: 40px; }
+    .cmb-puesto { min-width: 16rem; }
+    .cmb-ec { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .cmb-star { color: var(--ok); }
+    .res-table tr.is-impacto > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+    .res-table tr.is-fav { background: color-mix(in srgb, var(--ok-soft) 70%, transparent); }
+    .res-table tr.is-per { background: color-mix(in srgb, var(--danger-soft) 70%, transparent); }
+    .res-table td .tag + .tag { margin-left: 4px; }
+    .cmb-ranking { margin-top: 20px; padding: 16px 18px; }
+    .cmb-ranking h2 { margin: 0; font-size: 1.05rem; }
+    .cmb-ranking p { margin: 4px 0 12px; }
+    .cmb-nota { margin-top: 24px; font-size: .88rem; }
+    .cmb-nota ul { margin: 6px 0 0; padding-left: 1.2em; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="site-header__inner">
+    <a class="brand" href="index.html">
+      <span class="brand__mark" aria-hidden="true">CGR</span>
+      <span class="brand__text">
+        <span class="brand__title">CPM N° 06-2026-CG</span>
+        <span class="brand__sub">Fortalecimiento de los Órganos y Unidades Orgánicas</span>
+      </span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a class="nav__link" href="index.html">Bases</a>
+      <a class="nav__link" href="dashboard.html">Perfiles</a>
+      <a class="nav__link" href="resultados.html">Inscripción</a>
+      <a class="nav__link" href="evaluaciones.html">Evaluaciones</a>
+      <a class="nav__link" href="cambios.html" aria-current="page">Cambios</a>
+    </nav>
+    <button class="icon-btn" id="theme-toggle" type="button" aria-label="Cambiar tema"></button>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="dash-head">
+    <div>
+      <h1>Cambios en la evaluación curricular</h1>
+      <p class="view__intro" id="pub-info">CPM N° 06-2026-CG</p>
+    </div>
+  </div>
+
+  <!-- Resumen -->
+  <div class="kpis cmb-kpis">
+    <div class="kpi">
+      <div class="kpi__label">Postulantes con otra curricular</div>
+      <div class="kpi__value" id="k-cambios">—</div>
+      <div class="kpi__hint" id="k-cambios-hint"></div>
+    </div>
+    <div class="kpi cmb-kpi--ok">
+      <div class="kpi__label">Favorecidos</div>
+      <div class="kpi__value" id="k-fav">—</div>
+      <div class="kpi__hint" id="k-fav-hint"></div>
+    </div>
+    <div class="kpi cmb-kpi--danger">
+      <div class="kpi__label">Perjudicados</div>
+      <div class="kpi__value" id="k-per">—</div>
+      <div class="kpi__hint" id="k-per-hint"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi__label">Afectados sin cambiar su nota</div>
+      <div class="kpi__value" id="k-ind">—</div>
+      <div class="kpi__hint">entran o salen de los puestos ganadores por cambios de otros</div>
+    </div>
+  </div>
+
+  <div class="charts cmb-charts">
+    <section class="card chart">
+      <div class="chart__head"><h3>Cómo cambió la curricular</h3><span>antes → ahora</span></div>
+      <div class="hbars" id="chart-trans"></div>
+    </section>
+    <section class="card chart">
+      <div class="chart__head"><h3>Perfiles con más impacto</h3><span>entradas y salidas de puestos ganadores</span></div>
+      <div class="hbars" id="chart-top"></div>
+    </section>
+  </div>
+
+  <!-- Vistas -->
+  <div class="page-tabs cmb-tabs" role="tablist" aria-label="Vistas del reporte">
+    <button type="button" class="page-tab" role="tab" data-tab="perfiles" aria-selected="true">Perfiles</button>
+    <button type="button" class="page-tab" role="tab" data-tab="favorecidos" aria-selected="false">Favorecidos</button>
+    <button type="button" class="page-tab" role="tab" data-tab="perjudicados" aria-selected="false">Perjudicados</button>
+  </div>
+
+  <div class="card cmb-filters">
+    <div class="field">
+      <label class="field__label" for="f-perfil">Perfil de puesto</label>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input class="input" id="f-perfil" list="dl-perfiles" placeholder="Todos los perfiles con cambios" autocomplete="off">
+        <datalist id="dl-perfiles"></datalist>
+      </div>
+    </div>
+    <div class="field" id="fld-buscar">
+      <label class="field__label" for="f-buscar">Buscar por nombre o DNI</label>
+      <input class="input" id="f-buscar" type="search" placeholder="Apellidos, nombres o DNI…" autocomplete="off">
+    </div>
+    <div class="field" id="fld-orden">
+      <label class="field__label" for="f-orden">Ordenar por</label>
+      <select class="select" id="f-orden">
+        <option value="impacto">Impacto en puestos ganadores</option>
+        <option value="cambios">Cambios en curricular</option>
+        <option value="califican">Nuevos finalistas</option>
+        <option value="corte">Subida del puntaje de corte</option>
+      </select>
+    </div>
+    <div class="field" id="fld-puesto" hidden>
+      <label class="check"><input type="checkbox" id="f-puesto"> Incluir subidas y bajadas de puesto</label>
+    </div>
+    <div class="field">
+      <button class="btn btn--text btn--sm" type="button" id="limpiar">Limpiar filtros</button>
+    </div>
+  </div>
+
+  <!-- Ranking del perfil seleccionado -->
+  <section class="card cmb-ranking" id="ranking" hidden>
+    <h2 id="rk-title"></h2>
+    <p class="muted" id="rk-meta"></p>
+    <div class="res-table-wrap">
+      <table class="res-table">
+        <thead>
+          <tr>
+            <th class="num">Puesto ahora</th>
+            <th class="num">Antes</th>
+            <th>DNI</th>
+            <th>Apellidos y nombres</th>
+            <th class="num">EC antes → ahora</th>
+            <th class="num">Acumulado</th>
+            <th>Efecto</th>
+          </tr>
+        </thead>
+        <tbody id="t-rank"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Perfiles -->
+  <section data-panel="perfiles">
+    <div class="results-bar"><div class="results-bar__count" id="n-perfiles"></div></div>
+    <div class="res-table-wrap">
+      <table class="res-table">
+        <thead>
+          <tr>
+            <th class="num">Perfil</th>
+            <th>Puesto</th>
+            <th class="num">Plazas</th>
+            <th class="num" title="Postulantes cuya curricular cambió">Cambios EC</th>
+            <th class="num" title="Pasan a calificar / dejan de calificar">Califican</th>
+            <th class="num" title="Finalistas que califican en PT, PA y EC">Finalistas</th>
+            <th class="num" title="Entran / salen de los puestos ganadores">Puestos ganadores</th>
+            <th class="num" title="Puntaje acumulado del último puesto ganador">Corte</th>
+          </tr>
+        </thead>
+        <tbody id="t-perfiles"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Favorecidos -->
+  <section data-panel="favorecidos" hidden>
+    <div class="results-bar"><div class="results-bar__count" id="n-fav"></div></div>
+    <div class="res-table-wrap">
+      <table class="res-table">
+        <thead>
+          <tr>
+            <th>DNI</th><th>Apellidos y nombres</th><th class="num">Perfil</th><th>Efecto</th>
+            <th class="num">EC antes → ahora</th><th class="num">Acumulado</th><th class="num">Puesto</th>
+          </tr>
+        </thead>
+        <tbody id="t-fav"></tbody>
+      </table>
+      <div class="empty" id="e-fav" hidden><p>No hay favorecidos con los filtros aplicados.</p></div>
+    </div>
+  </section>
+
+  <!-- Perjudicados -->
+  <section data-panel="perjudicados" hidden>
+    <div class="results-bar"><div class="results-bar__count" id="n-per"></div></div>
+    <div class="res-table-wrap">
+      <table class="res-table">
+        <thead>
+          <tr>
+            <th>DNI</th><th>Apellidos y nombres</th><th class="num">Perfil</th><th>Efecto</th>
+            <th class="num">EC antes → ahora</th><th class="num">Acumulado</th><th class="num">Puesto</th>
+          </tr>
+        </thead>
+        <tbody id="t-per"></tbody>
+      </table>
+      <div class="empty" id="e-per" hidden><p>No hay perjudicados con los filtros aplicados.</p></div>
+    </div>
+  </section>
+
+  <div class="callout cmb-nota">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>
+    <div>
+      <strong>Cómo se clasifica a cada postulante</strong>
+      <ul>
+        <li><strong>Favorecido:</strong> entra a los puestos ganadores de su perfil, pasa a calificar o sube su puntaje curricular.</li>
+        <li><strong>Perjudicado:</strong> sale de los puestos ganadores, deja de calificar o baja su puntaje curricular.</li>
+        <li>Se cuenta también a quienes no cambiaron de nota, pero entraron o salieron de los puestos ganadores porque cambió la de otros.</li>
+        <li>Los puestos ganadores son los N primeros por puntaje acumulado (PT 30%, PA 20%, EC 30%), donde N es el número de plazas; los empates se resuelven por conocimientos y luego por curricular. Es una proyección: falta la entrevista personal (20%) y las bonificaciones de ley.</li>
+      </ul>
+    </div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    Comparación entre las publicaciones de resultados de la evaluación curricular del 12 de noviembre de 2026
+    (reemplazada) y del 17 de noviembre de 2026, publicadas por la Subgerencia de Políticas y Desarrollo Humano —
+    Gerencia de Capital Humano. Ante cualquier diferencia, prevalece el documento oficial publicado por la
+    Contraloría General de la República.
+  </div>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/resultados-data.js"></script>
+<script src="js/evaluaciones-data.js"></script>
+<script src="js/cambios-ec-data.js"></script>
+<script src="js/merito.js"></script>
+<script src="js/cambios.js"></script>
+</body>
+</html>

@@ -176,9 +176,15 @@ small { font-size: 0.85em; }
 .icon-btn:hover { color: var(--ink); border-color: var(--line-strong); }
 .icon-btn svg { width: 18px; height: 18px; }
 
-@media (max-width: 640px) {
+@media (max-width: 760px) {
   .brand__text { display: none; }
   .nav__link { padding: 8px 10px; font-size: 0.85rem; }
+}
+/* En teléfonos, el menú se desplaza horizontalmente en vez de encimarse */
+@media (max-width: 520px) {
+  .nav { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav__link { padding: 7px 8px; font-size: 0.82rem; }
 }
 
 /* ---------- Layout helpers ---------- */

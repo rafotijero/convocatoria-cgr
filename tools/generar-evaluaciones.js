@@ -7,6 +7,8 @@
  * Fuentes (archivos/05 Curricular):
  *   - CPM_06_2026_Resultados_Eva_Curricular.md            (EC, peso 30%) — todos los evaluados (versión del 17/11)
  *   - CPM_06_2026_Resultados_Eva_Curricular.xlsx          todas las filas; se usa para validar
+ *   - CPM_06_2026_Resultados_Evaluacion_Curricular.md/.xlsx  publicación del 12/11, reemplazada;
+ *     solo para js/cambios-ec-data.js (reporte de cambios)
  * Uso: node tools/generar-evaluaciones.js
  *
  * Los .md son la conversión (OCR) de los PDF oficiales. Se toman como fuente principal porque
@@ -25,7 +27,7 @@ const DIR_04 = path.join(ROOT, 'archivos', '04 Evaluaciones');
 const OUT    = path.join(ROOT, 'js', 'evaluaciones-data.js');
 const XLSX   = path.join(DIR_04, 'CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx');
 const DIR_05  = path.join(ROOT, 'archivos', '05 Curricular');
-const XLSX_EC = path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular.xlsx');
+const OUT_CAMBIOS = path.join(ROOT, 'js', 'cambios-ec-data.js');
 
 const ETAPAS = {
   pt: {
@@ -42,8 +44,18 @@ const ETAPAS = {
   },
   ec: {
     file: path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular.md'),
+    xlsx: path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular.xlsx'),
+    curricular: true,
     label: 'EC – Curricular',
     pub: '17 de noviembre de 2026',
+  },
+  // Publicación anterior, reemplazada por la del 17/11. Solo se usa para el reporte de cambios.
+  ecPrev: {
+    file: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular.md'),
+    xlsx: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular.xlsx'),
+    curricular: true,
+    label: 'EC – Curricular (12/11, reemplazada)',
+    pub: '12 de noviembre de 2026',
   },
 };
 
@@ -134,7 +146,8 @@ function parseRowEC(line) {
 /* ---------- Leer un .md completo → Map<dni, record> ---------- */
 function parseStage(key) {
   const cfg = ETAPAS[key];
-  const parse = key === 'ec' ? parseRowEC : parseRow;
+  const ec = Boolean(cfg.curricular);
+  const parse = ec ? parseRowEC : parseRow;
   const byDni = new Map();
   const conteo = CONDS.map(() => 0);
   let esperado = 1;
@@ -153,10 +166,10 @@ function parseStage(key) {
 
     // Coherencia puntaje ↔ condición. En curricular solo CALIFICA lleva puntaje (12 a 20)
     // y no existe NO SE PRESENTÓ.
-    const conPuntaje = key === 'ec' ? row.cond === 0 : row.cond <= 1;
-    if (key === 'ec' && row.cond === 3) {
+    const conPuntaje = ec ? row.cond === 0 : row.cond <= 1;
+    if (ec && row.cond === 3) {
       errores.push(`${donde}: NO SE PRESENTÓ no aplica en curricular`);
-    } else if (key === 'ec' && row.cond === 0 && !row.nombre) {
+    } else if (ec && row.cond === 0 && !row.nombre) {
       errores.push(`${donde}: CALIFICA sin nombre`);
     } else if (row.puntaje !== null && row.puntaje > 20) {
       errores.push(`${donde}: puntaje ${row.puntaje} mayor que 20`);
@@ -251,14 +264,15 @@ function validarExcel(key, byDni) {
 }
 
 /* ---------- Validar curricular contra su Excel (todas las filas) ---------- */
-function validarExcelEC(byDni) {
-  const rows = readSheet(readZip(XLSX_EC)('xl/worksheets/sheet1.xml'));
-  if (rows.length !== byDni.size) errores.push(`ec: ${rows.length} filas en el Excel y ${byDni.size} en el .md`);
+function validarExcelEC(key, byDni) {
+  const cfg  = ETAPAS[key];
+  const rows = readSheet(readZip(cfg.xlsx)('xl/worksheets/sheet1.xml'));
+  if (rows.length !== byDni.size) errores.push(`${key}: ${rows.length} filas en el Excel y ${byDni.size} en el .md`);
 
   for (const r of rows) {
     const dni = r.C;
     const md = byDni.get(dni);
-    const donde = `ec Excel N° ${r.A} (${dni})`;
+    const donde = `${key} Excel N° ${r.A} (${dni})`;
     if (!md) { errores.push(`${donde}: no está en el .md`); continue; }
     const puntaje = r.F === undefined ? null : parseFloat(r.F);
     // El Excel sale de la misma conversión y repite el nombre corrido a la columna del perfil
@@ -271,7 +285,33 @@ function validarExcelEC(byDni) {
     if (CONDS[md.cond] !== r.G)          errores.push(`${donde}: condición ${r.G} ≠ ${CONDS[md.cond]}`);
     if ((md.nombre || '') !== (r.D || '')) errores.push(`${donde}: nombre "${r.D}" ≠ "${md.nombre}"`);
   }
-  console.log(`  ${ETAPAS.ec.label}: ${rows.length} filas verificadas contra el Excel`);
+  console.log(`  ${cfg.label}: ${rows.length} filas verificadas contra el Excel`);
+}
+
+/* ---------- Diferencias con la publicación curricular anterior ---------- */
+// Devuelve [dni, ec_score_anterior, ec_cond_anterior] solo de quienes cambiaron, con el
+// documento tal como figura en data. null en la condición = no figuraba.
+function diffCurricular(data, prevMap) {
+  const prevPorKey = new Map([...prevMap.values()].map((r) => [docKey(r.dni), r]));
+  const usados = new Set();
+  const cambios = [];
+
+  for (const r of data) {
+    const key  = docKey(r[0]);
+    const prev = prevPorKey.get(key) || null;
+    if (prev) {
+      usados.add(key);
+      if (prev.perfil !== r[2]) errores.push(`ecPrev: ${prev.dni} perfil ${prev.perfil} ≠ ${r[2]}`);
+    }
+    const pScore = prev ? prev.puntaje : null;
+    const pCond  = prev ? prev.cond    : null;
+    if (pScore !== r[7] || pCond !== r[8]) cambios.push([r[0], pScore, pCond]);
+  }
+  for (const [key, prev] of prevPorKey) {
+    if (!usados.has(key)) errores.push(`ecPrev: ${prev.dni} no figura en conocimientos ni aptitud`);
+  }
+  console.log(`  Cambios respecto de la publicación del ${ETAPAS.ecPrev.pub}: ${cambios.length}`);
+  return cambios;
 }
 
 /* ---------- Combinar las etapas ---------- */
@@ -331,11 +371,14 @@ function main() {
   const ptMap = parseStage('pt');
   const paMap = parseStage('pa');
   const ecMap = parseStage('ec');
+  const ecPrevMap = parseStage('ecPrev');
   validarExcel('pt', ptMap);
   validarExcel('pa', paMap);
-  validarExcelEC(ecMap);
+  validarExcelEC('ec', ecMap);
+  validarExcelEC('ecPrev', ecPrevMap);
 
   const data = combine(ptMap, paMap, ecMap);
+  const cambios = diffCurricular(data, ecPrevMap);
 
   if (errores.length) {
     console.error(`\n${errores.length} error(es); no se escribió el archivo:`);
@@ -368,6 +411,12 @@ function main() {
 
   const kb = (Buffer.byteLength(body) / 1024).toFixed(0);
   console.log(`Escrito: js/evaluaciones-data.js (${kb} KB, ${data.length} registros)`);
+
+  // Reporte de cambios: la página reconstruye la publicación anterior reemplazando
+  // la curricular de estos registros en CPM_EVAL.
+  const bodyCambios = `window.CPM_EC_PREV = ${JSON.stringify({ pub: ETAPAS.ecPrev.pub, cambios })};\n`;
+  fs.writeFileSync(OUT_CAMBIOS, header + bodyCambios, 'utf8');
+  console.log(`Escrito: js/cambios-ec-data.js (${cambios.length} cambios)`);
 }
 
 main();

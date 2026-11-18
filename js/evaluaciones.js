@@ -14,37 +14,14 @@
       .toLowerCase()
       .trim();
 
-  /* ---------- Ponderaciones según las bases ---------- */
-  const W = { pt: 0.30, pa: 0.20, ec: 0.30, ep: 0.20 };
+  // Acumulado, orden de mérito y "va ganando": js/merito.js
+  const { calcAcumulado, cmpMerito, rankear } = window.CPM_MERITO;
 
   /* ---------- Condición general: la peor de las etapas con resultado ---------- */
   function overallCond(conds) {
     const vals = conds.filter((v) => v !== null && v !== undefined);
     if (vals.length === 0) return null;
     return Math.max(...vals);
-  }
-
-  /* ---------- Acumulado ponderado de las etapas disponibles ---------- */
-  // Redondeado a dos decimales, como el puntaje final de las bases; además evita que
-  // errores de coma flotante rompan los empates.
-  function calcAcumulado(ptScore, paScore, ecScore, epScore) {
-    let acc = null;
-    if (ptScore !== null) acc = (acc ?? 0) + ptScore * W.pt;
-    if (paScore !== null) acc = (acc ?? 0) + paScore * W.pa;
-    if (ecScore !== null) acc = (acc ?? 0) + ecScore * W.ec;
-    if (epScore !== null) acc = (acc ?? 0) + epScore * W.ep;
-    return acc === null ? null : Math.round(acc * 100) / 100;
-  }
-
-  /* ---------- Orden de mérito ---------- */
-  // Mayor acumulado; en empate, mayor puntaje en conocimientos y luego en curricular
-  // (criterios 1 y 2 de desempate de las bases). Los registros sin acumulado van al final.
-  const sc = (v) => (v === null ? -1 : v);
-  function cmpMerito(a, b) {
-    if (a.acumulado === null || b.acumulado === null) {
-      return (a.acumulado === null) - (b.acumulado === null);
-    }
-    return (b.acumulado - a.acumulado) || (sc(b.ptScore) - sc(a.ptScore)) || (sc(b.ecScore) - sc(a.ecScore));
   }
 
   // Calificó en aptitud pero no figura en la publicación curricular ya publicada
@@ -186,29 +163,8 @@
 
   /* ---------- Marcar ganadores por perfil ---------- */
   // Por cada perfil, los N primeros CALIFICA en orden de mérito "van ganando",
-  // donde N = número de plazas del perfil. Los empates que persisten tras los
-  // criterios de desempate disponibles se incluyen todos.
-  (function markGanadores() {
-    const porPerfil = {};
-    records.forEach((r) => {
-      if (r.cond !== 0 || r.acumulado === null) return;
-      if (!porPerfil[r.perfil]) porPerfil[r.perfil] = [];
-      porPerfil[r.perfil].push(r);
-    });
-
-    Object.entries(porPerfil).forEach(([perfil, grupo]) => {
-      const p = perfilesMap[parseInt(perfil, 10)];
-      const plazas = p ? p.posiciones : 0;
-      if (!plazas) return;
-
-      const sorted    = [...grupo].sort(cmpMerito);
-      const limiteIdx = Math.min(plazas, sorted.length) - 1;
-      if (limiteIdx < 0) return;
-      const limite = sorted[limiteIdx];
-
-      grupo.forEach((r) => { if (cmpMerito(r, limite) <= 0) r.ganando = true; });
-    });
-  })();
+  // donde N = número de plazas del perfil (ver js/merito.js).
+  rankear(records, (perfil) => (perfilesMap[perfil] ? perfilesMap[perfil].posiciones : 0));
 
   function perfilIdFromInput(val) {
     if (!val || !val.trim()) return null;
