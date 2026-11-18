@@ -115,20 +115,34 @@
     const { s, rivales, plazas, finalistas } = actual;
     const asegura = notaNecesaria(EP_MAX);
     const con12   = notaNecesaria(EP_MIN);
-    const igual   = rivales.filter((r) => vaDelante(r, 16, r2(r.acumulado + W_EP * 16), s, 16, pfPropio(s.acumulado, 16), () => true)).length < plazas;
+    // Puesto en que quedaría si saca e y todos sus rivales sacan x
+    const puestoCon = (e, x) => 1 + rivales.filter((r) =>
+      vaDelante(r, x, r2(r.acumulado + W_EP * x), s, e, pfPropio(s.acumulado, e), () => true)).length;
+    const p20   = puestoCon(EP_MAX, EP_MAX);
+    const igual = puestoCon(16, 16);
+    const plz = `${plazas} plaza${plazas !== 1 ? 's' : ''}`;
 
     const fila = (k, v, hint) => `<div><dt>${k}</dt><dd>${v}${hint ? `<br><small class="muted">${hint}</small>` : ''}</dd></div>`;
-    const nec = (e) => (e === null
-      ? `<span class="tag tag--danger">Ni con 20: depende de sus rivales</span>`
-      : e === EP_MIN ? `<span class="tag tag--ok">Le basta aprobar (12)</span>`
-        : `<strong>${f1(e)}</strong> o más`);
+    const si = (t) => `<span class="tag tag--ok">${t}</span>`;
+    const no = (t) => `<span class="tag tag--danger">${t}</span>`;
+
+    const filaAsegura = asegura === null
+      ? fila('¿Puede asegurar la plaza?', no('No, depende de sus rivales'),
+        `Aunque saque 20, si sus rivales también sacan 20 quedaría ${p20}° y solo hay ${plz}. Necesita que varios de los que tiene delante saquen menos.`)
+      : asegura === EP_MIN
+        ? fila('¿Puede asegurar la plaza?', si('Sí, con solo aprobar (12)'), 'Gana aunque todos sus rivales saquen 20.')
+        : fila('¿Puede asegurar la plaza?', `${si('Sí')} con <strong>${f1(asegura)}</strong> o más`, 'Con esa nota gana aunque todos sus rivales saquen 20.');
+
+    const filaCon12 = con12 === null
+      ? fila('Si todos sus rivales sacan 12', no('No entra ni con 20'), 'Es el mejor caso posible: sus rivales aprueban con lo mínimo.')
+      : fila('Si todos sus rivales sacan 12', con12 === EP_MIN ? si('Entra con 12') : `Necesita <strong>${f1(con12)}</strong> o más`,
+        'Es el mejor caso posible: sus rivales aprueban con lo mínimo.');
 
     $('#c-exactos').innerHTML = `<dl class="kv">
-      ${fila('Asegura la plaza con', nec(asegura), 'aunque todos sus rivales saquen 20')}
-      ${fila('Si todos sus rivales sacan 12', nec(con12), 'necesita esta nota para entrar')}
-      ${fila('Si todos sacan la misma nota', igual
-        ? '<span class="tag tag--ok">Gana</span>' : '<span class="tag tag--danger">No gana</span>',
-        'se mantiene el orden actual del acumulado')}
+      ${filaAsegura}
+      ${filaCon12}
+      ${fila('Si todos sacan la misma nota', igual <= plazas ? si(`Gana: queda ${igual}°`) : no(`No gana: queda ${igual}°`),
+        `La entrevista no cambia el orden actual del acumulado; hay ${plz}.`)}
       ${fila('Su puntaje final posible', `${f2(pfPropio(s.acumulado, EP_MIN))} a ${f2(pfPropio(s.acumulado, EP_MAX))}`, 'con 12 y con 20 en la entrevista, de 20 puntos')}
     </dl>
     ${finalistas.length <= plazas ? `<p class="calc-nota">Hay ${finalistas.length} finalista${finalistas.length !== 1 ? 's' : ''} para ${plazas} plaza${plazas !== 1 ? 's' : ''}: todos los que aprueben la entrevista ganan.</p>` : ''}
@@ -225,6 +239,14 @@
   /* ---------- Controles ---------- */
   dlg.querySelectorAll('input[name="c-esc"]').forEach((i) => i.addEventListener('change', () => {
     st.esc = i.value;
+    if (i.value === 'custom') {
+      // Personalizado parte de los valores actuales y abre los ajustes
+      const det = $('#c-ajustes');
+      det.open = true;
+      det.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      $('#c-mu').focus({ preventScroll: true });
+      return;
+    }
     Object.assign(st, { mu: ESCENARIOS[i.value].mu, sd: ESCENARIOS[i.value].sd, ns: ESCENARIOS[i.value].ns });
     syncControles();
     renderProbabilidades();
