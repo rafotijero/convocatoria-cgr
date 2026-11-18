@@ -13,6 +13,51 @@
     .eval-ganando { font-size: .72em; }
     .eval-etapas { margin-top: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
     @media (max-width: 1100px) { .eval-etapas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    /* Tabla compacta: cabe a lo ancho sin desplazamiento horizontal */
+    #res-table { font-size: .86rem; table-layout: auto; }
+    #res-table th { padding: 8px 8px; white-space: normal; line-height: 1.2; vertical-align: bottom; }
+    #res-table th small { display: block; font-size: .68rem; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--muted); white-space: nowrap; }
+    #res-table td { padding: 7px 8px; }
+    #res-table td:nth-child(2) { font-variant-numeric: tabular-nums; }
+    #res-table td:nth-child(3) { min-width: 9rem; }
+    #res-table td .tag { font-size: .68rem; padding: 1px 7px; line-height: 1.5; }
+    #res-table td .eval-ganando { font-size: .66rem; }
+    #res-table th:first-child, #res-table td:first-child { padding-left: 12px; }
+    @media (max-width: 1180px) {
+      #res-table th:first-child, #res-table td:first-child { display: none; }
+    }
+
+    /* Pantallas angostas: cada fila es una tarjeta */
+    @media (max-width: 1000px) {
+      #res-table-wrap { border: 0; background: none; max-height: none; overflow: visible; }
+      #res-table, #res-table tbody { display: block; }
+      #res-table thead { display: none; }
+      #res-table tr {
+        display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 10px;
+        padding: 12px 14px; margin-bottom: 8px;
+        border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+      }
+      #res-table tr.is-winning { background: color-mix(in srgb, var(--ok-soft) 60%, var(--surface)); }
+      #res-table tr.is-winning > td:first-child { box-shadow: none; }
+      #res-table td { display: block; padding: 0; border: 0; text-align: left; min-width: 0; }
+      #res-table td[data-label]::before {
+        content: attr(data-label); display: block; margin-bottom: 2px;
+        font-size: .68rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--muted);
+      }
+      #res-table td:nth-child(3) { grid-column: 1 / -1; order: -2; font-size: .95rem; min-width: 0; }
+      #res-table td:nth-child(2) { grid-column: 1 / 3; order: -1; }
+      #res-table td:nth-child(4) { grid-column: 3 / -1; order: -1; }
+      #res-table td:nth-child(9) { grid-column: 1 / 3; }
+      #res-table td:nth-child(10) { grid-column: 3 / -1; }
+      #res-table .eval-ep { justify-content: flex-start; }
+      #res-table tbody tr:hover { background: var(--surface); }
+    }
+    @media (max-width: 480px) {
+      #res-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #res-table td:nth-child(2), #res-table td:nth-child(9) { grid-column: 1; }
+      #res-table td:nth-child(4), #res-table td:nth-child(10) { grid-column: 2; }
+    }
+
     .eval-cita { white-space: nowrap; font-size: .85rem; line-height: 1.35; }
     .eval-cita small { color: var(--muted); }
     .eval-cita.is-pasada { opacity: .6; }
@@ -276,16 +321,16 @@
     <table class="res-table" id="res-table">
       <thead>
         <tr>
-          <th class="num" style="width:3.5rem">#</th>
-          <th style="width:7rem">DNI</th>
-          <th>Apellidos y Nombres</th>
-          <th class="num" style="width:4.5rem">Perfil</th>
-          <th class="num" style="width:8rem">PT – Conocimientos (30%)</th>
-          <th class="num" style="width:8rem">PA – Aptitud (20%)</th>
-          <th class="num" style="width:8rem">EC – Curricular (30%)</th>
-          <th class="num" style="width:8rem">EP – Entrevista (20%)</th>
-          <th class="num" style="width:8rem">Puntaje acumulado</th>
-          <th style="width:9rem">Condición</th>
+          <th class="num">#</th>
+          <th>DNI</th>
+          <th>Apellidos y nombres</th>
+          <th class="num">Perfil</th>
+          <th class="num" title="Conocimientos, 30% del puntaje final">PT<small>Conocim. · 30%</small></th>
+          <th class="num" title="Aptitud, 20% del puntaje final">PA<small>Aptitud · 20%</small></th>
+          <th class="num" title="Curricular, 30% del puntaje final">EC<small>Curricular · 30%</small></th>
+          <th class="num" title="Entrevista, 20% del puntaje final">EP<small>Entrevista · 20%</small></th>
+          <th class="num" title="Suma ponderada de las etapas publicadas, sobre 16 posibles">Acum.<small>de 16</small></th>
+          <th>Condición</th>
         </tr>
       </thead>
       <tbody id="res-tbody"></tbody>

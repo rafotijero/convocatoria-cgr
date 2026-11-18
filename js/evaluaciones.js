@@ -421,11 +421,15 @@
     '<span class="tag" title="Calificó en aptitud, pero no figura en la publicación oficial de la evaluación curricular">SIN RESULTADO EC</span>',
   ];
 
-  function scoreCell(score, cond, falta) {
+  // Nota de una etapa sin ceros de relleno: 17 y 19.5, no 17.00 y 19.50
+  const nota = (n) => (Number.isInteger(n) ? String(n) : String(Number(n.toFixed(2))));
+
+  // label: nombre de la columna, que se muestra en la vista de tarjetas (pantallas angostas)
+  function scoreCell(label, score, cond, falta) {
     const tag = cond !== null ? COND_TAG[cond] : falta ? '<span class="tag" title="No figura en la publicación oficial">NO FIGURA</span>' : '';
     // DESCALIFICA y NO SE PRESENTÓ no tienen puntaje, pero sí condición
-    if (score === null) return `<td class="num muted">—${tag ? `<br><small>${tag}</small>` : ''}</td>`;
-    return `<td class="num eval-score">${Number(score).toFixed(2)}<br><small>${tag}</small></td>`;
+    if (score === null) return `<td class="num muted" data-label="${label}">—${tag ? `<br><small>${tag}</small>` : ''}</td>`;
+    return `<td class="num eval-score" data-label="${label}">${nota(score)}<br><small>${tag}</small></td>`;
   }
 
   // Columna de entrevista de un finalista: el botón de la calculadora y, cuando se publique,
@@ -433,16 +437,16 @@
   // Mientras no haya resultado, muestra la cita (día, hora y panel)
   function epCalcCell(r, calcHtml, ahora) {
     const tag = r.epCond !== null ? `<small>${COND_TAG[r.epCond]}</small>` : '';
-    const nota = r.epScore !== null ? `<span class="eval-score">${Number(r.epScore).toFixed(2)}</span>` : '';
-    let info = nota || tag ? `${nota}${nota && tag ? '<br>' : ''}${tag}` : '';
+    const ep = r.epScore !== null ? `<span class="eval-score">${nota(r.epScore)}</span>` : '';
+    let info = ep || tag ? `${ep}${ep && tag ? '<br>' : ''}${tag}` : '';
     if (!info && r.cita) {
       const c = r.cita;
       const hoy = c.dia === ahora.dia;
       const pasada = !citaPendiente(c, ahora);
       info = `<span class="eval-cita${pasada ? ' is-pasada' : ''}" title="${pasada ? 'Entrevista realizada' : 'Entrevista programada'}: ${diaCorto(c.dia)}, de ${hhmm(c.ini)} a ${hhmm(c.fin)}, ${panelTxt(c.panel)}">
-        ${hoy ? '<span class="tag tag--accent">Hoy</span>' : diaCorto(c.dia)} ${hhmm(c.ini)}<br><small>${panelTxt(c.panel)}</small></span>`;
+        ${hoy ? '<span class="tag tag--accent">Hoy</span>' : diaCorto(c.dia)}<br><small>${hhmm(c.ini)} · P${String(c.panel).padStart(2, '0')}</small></span>`;
     }
-    return `<td class="num"><div class="eval-ep">${info ? `<div>${info}</div>` : ''}${calcHtml}</div></td>`;
+    return `<td class="num" data-label="EP – Entrevista"><div class="eval-ep">${info ? `<div>${info}</div>` : ''}${calcHtml}</div></td>`;
   }
 
   function render() {
@@ -479,15 +483,15 @@
               : '';
             return `<tr${r.ganando ? ' class="is-winning"' : ''}>
               <td class="num muted">${fmt(start + i + 1)}</td>
-              <td class="num">${r.dni}</td>
+              <td class="num" data-label="DNI">${r.dni}</td>
               <td>${escHtml(r.nombre)}</td>
-              <td class="num"><button class="perfil-link" data-id="${r.perfil}" type="button" title="Ver requisitos del perfil N° ${r.perfil}">${r.perfil}</button></td>
-              ${scoreCell(r.ptScore, r.ptCond)}
-              ${scoreCell(r.paScore, r.paCond)}
-              ${scoreCell(r.ecScore, r.ecCond, r.ecFalta)}
-              ${calcHtml ? epCalcCell(r, calcHtml, ahora) : scoreCell(r.epScore, r.epCond)}
-              <td class="num">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}</td>
-              <td>${condHtml}${ganadoHtml}</td>
+              <td class="num" data-label="Perfil"><button class="perfil-link" data-id="${r.perfil}" type="button" title="Ver requisitos del perfil N° ${r.perfil}">${r.perfil}</button></td>
+              ${scoreCell('PT – Conocimientos', r.ptScore, r.ptCond)}
+              ${scoreCell('PA – Aptitud', r.paScore, r.paCond)}
+              ${scoreCell('EC – Curricular', r.ecScore, r.ecCond, r.ecFalta)}
+              ${calcHtml ? epCalcCell(r, calcHtml, ahora) : scoreCell('EP – Entrevista', r.epScore, r.epCond)}
+              <td class="num" data-label="Acumulado">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}</td>
+              <td data-label="Condición">${condHtml}${ganadoHtml}</td>
             </tr>`;
           }
         )
