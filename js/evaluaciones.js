@@ -352,6 +352,8 @@
     return true;
   }
 
+  const colEs = new Intl.Collator('es', { sensitivity: 'base' });
+
   /* ---------- Filtrar ---------- */
   function applyFilters() {
     const q       = norm(searchEl.value);
@@ -390,6 +392,12 @@
       filtered = [...filtered].sort(cmpMerito);
     } else if (sk === 'cita') {
       filtered = [...filtered].sort(cmpCita);
+    } else if (sk === 'nombre') {
+      // Orden alfabético en español (Ñ después de N, sin distinguir tildes); sin nombre, al final
+      filtered = [...filtered].sort((a, b) => {
+        if (!a.nombre || !b.nombre) return (!a.nombre) - (!b.nombre) || a.dni.localeCompare(b.dni);
+        return colEs.compare(a.nombre, b.nombre) || a.dni.localeCompare(b.dni);
+      });
     } else if (sk === 'acum-asc') {
       filtered = [...filtered].sort((a, b) => {
         if (a.acumulado === null && b.acumulado === null) return 0;
