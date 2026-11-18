@@ -63,7 +63,7 @@ node tools/generar-evaluaciones.js
 
 Lee las tablas de los `.md` (conversión de los PDF oficiales, con todas las condiciones, incluida NO SE PRESENTÓ) y verifica cada CALIFICA contra el Excel `CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx`. Falla si hay diferencias de perfil, puntaje o condición, saltos en la numeración o puntajes incoherentes con la condición.
 
-También incorpora la evaluación curricular (`archivos/05 Curricular`): lee `CPM_06_2026_Resultados_Evaluacion_Curricular.md`, verifica todas sus filas contra el `.xlsx` del mismo nombre y exige que cada evaluado haya calificado en aptitud, con el mismo perfil. En curricular solo CALIFICA tiene puntaje. Quienes calificaron en aptitud y no figuran en la publicación curricular (11 en los perfiles 792 a 799) se informan como aviso y la página los muestra como SIN RESULTADO EC.
+También incorpora la evaluación curricular (`archivos/05 Curricular`): lee `CPM_06_2026_Resultados_Eva_Curricular.md` (publicación del 17 de noviembre, que reemplaza a la del 12), verifica todas sus filas contra el `.xlsx` del mismo nombre y exige que cada evaluado haya calificado en aptitud, con el mismo perfil. En curricular solo CALIFICA tiene puntaje. Quienes calificaron en aptitud y no figuran en la publicación curricular (3, en los perfiles 797 y 799) se informan como aviso y la página los muestra como SIN RESULTADO EC.
 
 En la página, el puntaje acumulado suma las etapas publicadas con sus pesos (redondeado a dos decimales) y, en empate, ordena por conocimientos y luego por curricular, según los criterios de desempate de las bases.
 

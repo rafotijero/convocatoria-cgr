@@ -5,8 +5,8 @@
  *   - CPM_06_2026_Resultados_Evaluación_Aptitud.md        (PA, peso 20%) — todos los evaluados
  *   - CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx     solo CALIFICA; se usa para validar
  * Fuentes (archivos/05 Curricular):
- *   - CPM_06_2026_Resultados_Evaluacion_Curricular.md     (EC, peso 30%) — todos los evaluados
- *   - CPM_06_2026_Resultados_Evaluacion_Curricular.xlsx   todas las filas; se usa para validar
+ *   - CPM_06_2026_Resultados_Eva_Curricular.md            (EC, peso 30%) — todos los evaluados (versión del 17/11)
+ *   - CPM_06_2026_Resultados_Eva_Curricular.xlsx          todas las filas; se usa para validar
  * Uso: node tools/generar-evaluaciones.js
  *
  * Los .md son la conversión (OCR) de los PDF oficiales. Se toman como fuente principal porque
@@ -25,7 +25,7 @@ const DIR_04 = path.join(ROOT, 'archivos', '04 Evaluaciones');
 const OUT    = path.join(ROOT, 'js', 'evaluaciones-data.js');
 const XLSX   = path.join(DIR_04, 'CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx');
 const DIR_05  = path.join(ROOT, 'archivos', '05 Curricular');
-const XLSX_EC = path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular.xlsx');
+const XLSX_EC = path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular.xlsx');
 
 const ETAPAS = {
   pt: {
@@ -41,9 +41,9 @@ const ETAPAS = {
     pub: '15 de octubre de 2026',
   },
   ec: {
-    file: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular.md'),
+    file: path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular.md'),
     label: 'EC – Curricular',
-    pub: '12 de noviembre de 2026',
+    pub: '17 de noviembre de 2026',
   },
 };
 
@@ -100,13 +100,18 @@ function parseRow(line) {
 }
 
 /* ---------- Fila de curricular ---------- */
-// | 1 | DNI | 46678978 | ALVA CUBAS, ROCIO | 403 | 16 | CALIFICA | 2 |
+// | 1 | DNI | 46678978 | ALVA CUBAS, ROCIO | 403 | 16 | CALIFICA |   (la versión del 12/11 traía además "Página PDF")
 // | 4915 | DNI | 76202661 |  | 544 |  | NO CALIFICA | 85 |   (sin nombre ni puntaje)
 function parseRowEC(line) {
   const c = line.trim().replace(/^\||\|$/g, '').split('|').map((s) => s.trim());
   if (!/^\d+$/.test(c[0])) return null;
-  if (c.length !== 8) return { error: 'columnas inesperadas' };
-  const [n, tipo, doc, nombre, perfil, puntaje, cond] = c;
+  if (c.length !== 7 && c.length !== 8) return { error: 'columnas inesperadas' };
+  let [n, tipo, doc, nombre, perfil, puntaje, cond] = c;
+
+  // Error OCR: | 4083 | DNI | 47277879 |  | ALTAMIRANO ..., JENNIFFER MARIA DEL MILAGRO 767 | 15 | CALIFICA |
+  // el nombre quedó en la columna del perfil, seguido del número de perfil
+  const corrido = !nombre && perfil.match(/^(\D.*?)\s+(\d+)$/);
+  if (corrido) { nombre = corrido[1]; perfil = corrido[2]; }
 
   const condIdx = CONDS.indexOf(cond);
   if (!/^(DNI|CE)$/.test(tipo))                        return { error: `tipo de documento "${tipo}"` };
@@ -256,6 +261,9 @@ function validarExcelEC(byDni) {
     const donde = `ec Excel N° ${r.A} (${dni})`;
     if (!md) { errores.push(`${donde}: no está en el .md`); continue; }
     const puntaje = r.F === undefined ? null : parseFloat(r.F);
+    // El Excel sale de la misma conversión y repite el nombre corrido a la columna del perfil
+    const corrido = !r.D && r.E && r.E.match(/^(\D.*?)\s+(\d+)$/);
+    if (corrido) { r.D = corrido[1]; r.E = corrido[2]; }
     if (md.n !== parseInt(r.A, 10))      errores.push(`${donde}: N° ${md.n} en el .md`);
     if (md.tipo !== r.B)                 errores.push(`${donde}: tipo ${r.B} ≠ ${md.tipo}`);
     if (md.perfil !== parseInt(r.E, 10)) errores.push(`${donde}: perfil ${r.E} ≠ ${md.perfil}`);
