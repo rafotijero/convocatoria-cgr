@@ -5,7 +5,7 @@ Sitio estático para consultar el **Concurso Público de Méritos N° 06-2026-CG
 - **`index.html` — Bases:** resumen de las bases con cronograma, etapas y pesos, requisitos, documentos, evaluación curricular, puntaje adicional, bonificaciones, desempate e impugnación.
 - **`dashboard.html` — Perfiles:** filtros por lugar de prestación, región, órgano, escala remunerativa (con monto), carrera, nivel educativo y experiencia; gráficos, resultados paginados y detalle de cada perfil (carreras, cursos, experiencia, requisitos adicionales, lugares y funciones).
 - **`resultados.html` — Inscripción:** resultados de la inscripción virtual con filtros por perfil, nombre o DNI, condición, sede, local y aula de evaluación; al filtrar un local muestra su dirección de ingreso, fecha y horario.
-- **`evaluaciones.html` — Evaluaciones:** puntajes y condición en conocimientos (PT), aptitud (PA) y curricular (EC), con puntaje acumulado, filtros por etapa y los postulantes que van ganando según las plazas de cada perfil.
+- **`evaluaciones.html` — Evaluaciones:** puntajes y condición en conocimientos (PT), aptitud (PA) y curricular (EC), con puntaje acumulado, filtros por etapa y los postulantes que van ganando según las plazas de cada perfil. Cada finalista tiene un botón de **calculadora** que abre un panel con su puesto, la nota de entrevista que le asegura la plaza o que necesita según lo que saquen sus rivales, la probabilidad de ganar en escenarios ajustables (incluidas sus bonificaciones) y los rivales cerca del corte.
 - **`cambios.html` — Cambios:** compara la publicación curricular del 12 de noviembre (reemplazada) con la del 17: transiciones de condición, perfiles con más impacto, favorecidos y perjudicados (incluidos quienes entran o salen de los puestos ganadores por cambios de otros) y el ranking antes y ahora de cada perfil. Acepta `?vista=favorecidos|perjudicados`, `?perfil=` y `?puestos=1`.
 
 ## Uso
@@ -31,6 +31,7 @@ js/dashboard.js       Lógica del dashboard
 js/bases.js           Cuenta regresiva, cronograma e índice
 js/merito.js          Acumulado, desempate y puestos ganadores (evaluaciones y cambios)
 js/cambios.js         Reporte de cambios de la evaluación curricular
+js/calculadora.js     Calculadora de posibilidades (panel en evaluaciones)
 js/tema.js            Selector de tema
 tools/generar-datos.js  Genera js/data.js a partir de los anexos
 tools/generar-resultados.js  Genera js/resultados-data.js (inscripción y sedes)

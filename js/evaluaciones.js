@@ -164,7 +164,8 @@
   /* ---------- Marcar ganadores por perfil ---------- */
   // Por cada perfil, los N primeros CALIFICA en orden de mérito "van ganando",
   // donde N = número de plazas del perfil (ver js/merito.js).
-  rankear(records, (perfil) => (perfilesMap[perfil] ? perfilesMap[perfil].posiciones : 0));
+  // Devuelve los CALIFICA de cada perfil en orden de mérito: los usa la calculadora.
+  const finalistasPorPerfil = rankear(records, (perfil) => (perfilesMap[perfil] ? perfilesMap[perfil].posiciones : 0));
 
   function perfilIdFromInput(val) {
     if (!val || !val.trim()) return null;
@@ -346,6 +347,8 @@
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
     );
 
+  const ICON_CALC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h8"/></svg>';
+
   const COND_TAG = [
     '<span class="tag tag--ok">CALIFICA</span>',
     '<span class="tag tag--warn">NO CALIFICA</span>',
@@ -388,6 +391,10 @@
           (r, i) => {
             const condHtml = r.cond !== null ? COND_TAG[r.cond] : '<span class="muted">—</span>';
             const ganadoHtml = r.ganando ? '<br><small><span class="tag tag--ok eval-ganando">★ va ganando</span></small>' : '';
+            // Solo los finalistas (CALIFICA en PT, PA y EC) tienen algo que calcular
+            const calcHtml = r.puesto !== null && window.CPM_CALC
+              ? `<button class="calc-btn" type="button" data-dni="${r.dni}" title="Calcular sus posibilidades de ganar" aria-label="Calcular las posibilidades de ${escHtml(r.nombre || r.dni)}">${ICON_CALC}</button>`
+              : '';
             return `<tr${r.ganando ? ' class="is-winning"' : ''}>
               <td class="num muted">${fmt(start + i + 1)}</td>
               <td class="num">${r.dni}</td>
@@ -398,7 +405,7 @@
               ${scoreCell(r.ecScore, r.ecCond, r.ecFalta)}
               ${scoreCell(r.epScore, r.epCond)}
               <td class="num">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}</td>
-              <td>${condHtml}${ganadoHtml}</td>
+              <td><div class="eval-cond">${calcHtml}<div>${condHtml}${ganadoHtml}</div></div></td>
             </tr>`;
           }
         )
@@ -511,6 +518,12 @@
   });
 
   tbody.addEventListener('click', (e) => {
+    const calc = e.target.closest('.calc-btn');
+    if (calc) {
+      const r = records.find((x) => x.dni === calc.dataset.dni);
+      if (r) window.CPM_CALC.open(r, finalistasPorPerfil.get(r.perfil) || [r], perfilesMap[r.perfil]);
+      return;
+    }
     const btn = e.target.closest('.perfil-link');
     if (!btn) return;
     clearFilters();

@@ -20,6 +20,35 @@
     .eval-presets { display: flex; flex-wrap: wrap; gap: 8px; }
     .eval-presets .pill { padding: 5px 12px; background: var(--surface); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
     .eval-presets .pill.is-active { background: var(--accent-soft); color: var(--accent-ink); box-shadow: inset 0 0 0 1px var(--accent); }
+
+    /* Calculadora */
+    .eval-cond { display: flex; align-items: flex-start; gap: 8px; }
+    .calc-btn {
+      flex: none; width: 30px; height: 30px; display: grid; place-items: center; padding: 0; cursor: pointer;
+      border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--accent-ink);
+    }
+    .calc-btn:hover, .calc-btn:focus-visible { border-color: var(--accent); background: var(--accent-soft); }
+    .calc-btn svg { width: 16px; height: 16px; }
+    #calc .facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (max-width: 640px) { #calc .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .calc-global { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+    .calc-global strong { font-size: 2.2rem; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--accent-ink); }
+    .calc-controls { display: grid; gap: 12px; margin: 14px 0; }
+    .calc-sliders { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin-top: 10px; }
+    @media (max-width: 560px) { .calc-sliders { grid-template-columns: 1fr; } }
+    .calc-sliders label { display: flex; justify-content: space-between; font-size: .82rem; color: var(--ink-2); }
+    .calc-bonos { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+    .calc-hbar { cursor: default; }
+    .calc-hbar .hbar__value { width: 3.2rem; }
+    .calc-nota { margin: 8px 0 0; font-size: .8rem; color: var(--muted); }
+    #calc .res-table td, #calc .res-table th { padding: 7px 10px; }
+    #calc .res-table td.num { white-space: nowrap; }
+    #calc tr.calc-yo { background: var(--accent-soft); font-weight: 600; }
+    #calc tr.calc-corte > td { border-bottom: 2px solid var(--accent); }
+    #calc tr.calc-salto td { text-align: center; color: var(--muted); padding: 2px; }
+    .calc-star { color: var(--ok); }
+    .calc-delante { color: var(--danger); }
+    #calc details summary { cursor: pointer; font-size: .86rem; font-weight: 600; color: var(--accent-ink); }
   </style>
 </head>
 <body>
@@ -278,6 +307,83 @@
   </div>
 </dialog>
 
+<!-- ============ CALCULADORA DE POSIBILIDADES ============ -->
+<dialog class="drawer" id="calc" aria-labelledby="c-title">
+  <div class="drawer__inner">
+    <header class="drawer__head">
+      <span class="eyebrow" id="c-eyebrow">Calculadora</span>
+      <h2 id="c-title"></h2>
+      <p id="c-sub"></p>
+      <div class="drawer__actions">
+        <button class="icon-btn" type="button" id="c-close" aria-label="Cerrar calculadora">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="drawer__body" tabindex="-1">
+      <div class="facts" id="c-facts"></div>
+
+      <section class="panel">
+        <h3>Lo que necesita en la entrevista</h3>
+        <div id="c-exactos"></div>
+      </section>
+
+      <section class="panel">
+        <h3>Probabilidad de ganar una plaza</h3>
+        <div class="calc-global">
+          <strong id="c-global">…</strong>
+          <span class="muted">si se presenta a la entrevista y su nota se comporta como la de sus rivales</span>
+        </div>
+
+        <div class="calc-controls">
+          <div class="seg" role="radiogroup" aria-label="Escenario de los rivales">
+            <input type="radio" name="c-esc" id="c-esc-flojos" value="flojos"><label for="c-esc-flojos">Rivales flojos</label>
+            <input type="radio" name="c-esc" id="c-esc-central" value="central"><label for="c-esc-central">Central</label>
+            <input type="radio" name="c-esc" id="c-esc-fuertes" value="fuertes"><label for="c-esc-fuertes">Rivales fuertes</label>
+            <input type="radio" name="c-esc" id="c-esc-custom" value="custom" disabled><label for="c-esc-custom">Personalizado</label>
+          </div>
+          <details>
+            <summary>Ajustar supuestos</summary>
+            <div class="calc-sliders">
+              <div><label for="c-mu">Nota promedio de los rivales <b id="c-mu-v"></b></label><input class="range" type="range" id="c-mu" min="12" max="19" step="0.5"></div>
+              <div><label for="c-sd">Dispersión de las notas <b id="c-sd-v"></b></label><input class="range" type="range" id="c-sd" min="0.5" max="4" step="0.5"></div>
+              <div><label for="c-ns">No se presentan <b id="c-ns-v"></b></label><input class="range" type="range" id="c-ns" min="0" max="20" step="1"></div>
+              <div><label for="c-pb">Rivales con bonificación de +10% <b id="c-pb-v"></b></label><input class="range" type="range" id="c-pb" min="0" max="30" step="1"></div>
+            </div>
+          </details>
+          <div>
+            <span class="field__label">Sus bonificaciones</span>
+            <div class="calc-bonos">
+              <label class="check"><input type="checkbox" id="c-ffaa"> Licenciado/a FF. AA. (+10% total)</label>
+              <label class="check"><input type="checkbox" id="c-disc"> Discapacidad (+15% total)</label>
+              <label class="check"><input type="checkbox" id="c-jov"> Joven, Ley 31533 (+10% entrevista)</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="hbars" id="c-por-nota"></div>
+        <p class="calc-nota" id="c-supuesto"></p>
+      </section>
+
+      <section class="panel">
+        <h3>Rivales cerca del corte</h3>
+        <div class="res-table-wrap">
+          <table class="res-table">
+            <thead><tr><th class="num">Puesto</th><th>Postulante</th><th class="num">Acumulado</th><th class="num">PT · EC</th><th class="num">Diferencia</th></tr></thead>
+            <tbody id="c-rivales"></tbody>
+          </table>
+        </div>
+        <p class="calc-nota" id="c-rivales-nota"></p>
+      </section>
+
+      <div class="callout callout--warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+        <p>Estimación informativa. Los cálculos de nota necesaria son exactos con las reglas de las bases (PF = acumulado + 20% de la entrevista; desempate por conocimientos, curricular y entrevista). Las probabilidades dependen de supuestos sobre la entrevista de los rivales, que no se conocen, y de sus bonificaciones, que no se publican.</p>
+      </div>
+    </div>
+  </div>
+</dialog>
+
 <footer class="site-footer">
   <div class="container">
     Resultados publicados por la Subgerencia de Políticas y Desarrollo Humano — Gerencia de Capital Humano:
@@ -293,6 +399,7 @@
 <script src="js/evaluaciones-data.js"></script>
 <script src="js/perfil-drawer.js"></script>
 <script src="js/merito.js"></script>
+<script src="js/calculadora.js"></script>
 <script src="js/evaluaciones.js"></script>
 </body>
 </html>
