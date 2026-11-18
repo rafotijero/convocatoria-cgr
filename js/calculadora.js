@@ -32,7 +32,7 @@
   };
 
   // Estado de los supuestos: se conserva entre aperturas del panel
-  const st = { esc: 'central', mu: 15.5, sd: 2.5, ns: 5, pb: 0, ffaa: false, disc: false, jov: false };
+  const st = { esc: 'central', mu: 15.5, sd: 2.5, ns: 5, pb: 0, ffaa: false, disc: false, jov: false, ep: 20 };
   let actual = null; // { s, rivales, plazas, perfil }
 
   /* ---------- Puntaje final y comparación ---------- */
@@ -69,6 +69,35 @@
         if (delante >= plazas) break;
       }
       if (delante < plazas) return e;
+    }
+    return null;
+  }
+
+  // Nota más alta (de 12 a 20, cada 0.1) que puede sacar el rival sin superar a la persona
+  // si ella saca e. 20 = no la supera nunca; null = la supera aunque saque 12 (tendría
+  // que desaprobar o no presentarse).
+  function limiteRival(r, e) {
+    const { s } = actual;
+    const pfS = pfPropio(s.acumulado, e);
+    for (let x10 = EP_MAX * 10; x10 >= EP_MIN * 10; x10--) {
+      const x = x10 / 10;
+      if (!vaDelante(r, x, r2(r.acumulado + W_EP * x), s, e, pfS, () => true)) return x;
+    }
+    return null;
+  }
+
+  // Nota más alta que pueden sacar todos los rivales a la vez para que la persona entre
+  // si ella saca e; null = no entra aunque todos aprueben con 12.
+  function maximoIgual(e) {
+    const { s, rivales, plazas } = actual;
+    const pfS = pfPropio(s.acumulado, e);
+    for (let x10 = EP_MAX * 10; x10 >= EP_MIN * 10; x10--) {
+      const x = x10 / 10;
+      let delante = 0;
+      for (const r of rivales) {
+        if (vaDelante(r, x, r2(r.acumulado + W_EP * x), s, e, pfS, () => true) && ++delante >= plazas) break;
+      }
+      if (delante < plazas) return x;
     }
     return null;
   }
@@ -118,7 +147,6 @@
     // Puesto en que quedaría si saca e y todos sus rivales sacan x
     const puestoCon = (e, x) => 1 + rivales.filter((r) =>
       vaDelante(r, x, r2(r.acumulado + W_EP * x), s, e, pfPropio(s.acumulado, e), () => true)).length;
-    const p20   = puestoCon(EP_MAX, EP_MAX);
     const igual = puestoCon(16, 16);
     const plz = `${plazas} plaza${plazas !== 1 ? 's' : ''}`;
 
@@ -127,26 +155,72 @@
     const no = (t) => `<span class="tag tag--danger">${t}</span>`;
 
     const filaAsegura = asegura === null
-      ? fila('¿Puede asegurar la plaza?', no('No, depende de sus rivales'),
-        `Aunque saque 20, si sus rivales también sacan 20 quedaría ${p20}° y solo hay ${plz}. Necesita que varios de los que tiene delante saquen menos.`)
+      ? fila('¿Puede asegurar la plaza?', no('No'), 'Aun con 20, depende de lo que saquen sus rivales: abajo verás cuánto pueden sacar como máximo.')
       : asegura === EP_MIN
         ? fila('¿Puede asegurar la plaza?', si('Sí, con solo aprobar (12)'), 'Gana aunque todos sus rivales saquen 20.')
         : fila('¿Puede asegurar la plaza?', `${si('Sí')} con <strong>${f1(asegura)}</strong> o más`, 'Con esa nota gana aunque todos sus rivales saquen 20.');
 
-    const filaCon12 = con12 === null
-      ? fila('Si todos sus rivales sacan 12', no('No entra ni con 20'), 'Es el mejor caso posible: sus rivales aprueban con lo mínimo.')
-      : fila('Si todos sus rivales sacan 12', con12 === EP_MIN ? si('Entra con 12') : `Necesita <strong>${f1(con12)}</strong> o más`,
-        'Es el mejor caso posible: sus rivales aprueban con lo mínimo.');
+    const filaMinima = con12 === null
+      ? fila('Nota mínima que necesita', no('No entra aunque saque 20'), 'Ni siquiera si todos sus rivales aprueban con 12; solo si varios desaprueban o no se presentan.')
+      : fila('Nota mínima que necesita', con12 === EP_MIN ? si('12 (aprobar)') : `<strong>${f1(con12)}</strong>`,
+        'Si todos sus rivales aprueban con lo mínimo (12). Con menos, solo entraría si algunos desaprueban o no se presentan.');
+
+    // Si saca st.ep: hasta cuánto pueden sacar sus rivales
+    const opciones = [];
+    for (let e = EP_MAX; e >= EP_MIN; e -= 0.5) opciones.push(`<option value="${e}"${e === st.ep ? ' selected' : ''}>${f1(e)}</option>`);
+    const maxIgual = maximoIgual(st.ep);
+    const valorSi = maxIgual === null
+      ? no('No entra aunque todos sus rivales aprueben con 12')
+      : maxIgual === EP_MAX ? si('Entra aunque todos sus rivales saquen 20')
+        : `Entra si sus rivales sacan como máximo <strong>${f1(maxIgual)}</strong>`;
+    const filaSi = fila(`Si saca <select class="select calc-ep" id="c-ep" aria-label="Nota de entrevista de la persona">${opciones.join('')}</select>`,
+      valorSi, 'Suponiendo que todos sus rivales sacan la misma nota. El detalle por rival está debajo.');
 
     $('#c-exactos').innerHTML = `<dl class="kv">
       ${filaAsegura}
-      ${filaCon12}
+      ${filaSi}
+      ${filaMinima}
       ${fila('Si todos sacan la misma nota', igual <= plazas ? si(`Gana: queda ${igual}°`) : no(`No gana: queda ${igual}°`),
         `La entrevista no cambia el orden actual del acumulado; hay ${plz}.`)}
       ${fila('Su puntaje final posible', `${f2(pfPropio(s.acumulado, EP_MIN))} a ${f2(pfPropio(s.acumulado, EP_MAX))}`, 'con 12 y con 20 en la entrevista, de 20 puntos')}
     </dl>
-    ${finalistas.length <= plazas ? `<p class="calc-nota">Hay ${finalistas.length} finalista${finalistas.length !== 1 ? 's' : ''} para ${plazas} plaza${plazas !== 1 ? 's' : ''}: todos los que aprueben la entrevista ganan.</p>` : ''}
+    ${renderLimites()}
+    ${finalistas.length <= plazas ? `<p class="calc-nota">Hay ${finalistas.length} finalista${finalistas.length !== 1 ? 's' : ''} para ${plz}: todos los que aprueben la entrevista ganan.</p>` : ''}
     <p class="calc-nota">Los empates que no resuelven conocimientos, curricular ni entrevista se cuentan en contra.</p>`;
+
+    $('#c-ep').addEventListener('change', (e) => { st.ep = parseFloat(e.target.value); renderExactos(); });
+  }
+
+  // Rivales que podrían quedar por delante de la persona si ella saca st.ep, con la nota máxima que
+  // cada uno puede sacar sin pasarla y cuántos tienen que quedarse por debajo.
+  function renderLimites() {
+    const { rivales, plazas } = actual;
+    const e = st.ep;
+    const peligrosos = rivales
+      .map((r) => ({ r, lim: limiteRival(r, e) }))
+      .filter((x) => x.lim !== EP_MAX);
+    const plz = `${plazas} plaza${plazas !== 1 ? 's' : ''}`;
+
+    if (peligrosos.length < plazas) {
+      return `<p class="calc-limites-titulo">Con ${f1(e)} ningún rival puede quitarle la plaza: como mucho ${peligrosos.length} quedarían por delante y hay ${plz}.</p>`;
+    }
+    const necesita = peligrosos.length - (plazas - 1);
+    const filas = peligrosos.map(({ r, lim }) => `<tr>
+        <td class="num">${r.puesto}°</td>
+        <td>${esc(r.nombre || r.dni)}</td>
+        <td class="num">${lim === null
+          ? '<span class="calc-delante">Desaprobar (menos de 12)</span>'
+          : `<strong>${f1(lim)}</strong> como máximo`}</td>
+      </tr>`).join('');
+    return `
+      <p class="calc-limites-titulo">Si saca ${f1(e)}, <strong>${peligrosos.length}</strong> rival${peligrosos.length !== 1 ? 'es' : ''} podría${peligrosos.length !== 1 ? 'n' : ''} quedar por delante.
+        Hay ${plz}, así que necesita que <strong>al menos ${necesita}</strong> de ell${peligrosos.length !== 1 ? 'os' : 'o'} se quede${necesita !== 1 ? 'n' : ''} en su límite o por debajo (o no se presente${necesita !== 1 ? 'n' : ''}):</p>
+      <div class="res-table-wrap calc-limites">
+        <table class="res-table">
+          <thead><tr><th class="num">Puesto</th><th>Rival</th><th class="num">Para no quedar por delante debe sacar</th></tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>`;
   }
 
   let timer;
