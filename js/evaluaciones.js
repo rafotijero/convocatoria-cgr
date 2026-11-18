@@ -364,6 +364,14 @@
     return `<td class="num eval-score">${Number(score).toFixed(2)}<br><small>${tag}</small></td>`;
   }
 
+  // Columna de entrevista de un finalista: el botón de la calculadora y, cuando se publique,
+  // su puntaje y condición en la entrevista
+  function epCalcCell(r, calcHtml) {
+    const tag = r.epCond !== null ? `<small>${COND_TAG[r.epCond]}</small>` : '';
+    const nota = r.epScore !== null ? `<span class="eval-score">${Number(r.epScore).toFixed(2)}</span>` : '';
+    return `<td class="num"><div class="eval-ep">${calcHtml}${nota || tag ? `<div>${nota}${nota && tag ? '<br>' : ''}${tag}</div>` : ''}</div></td>`;
+  }
+
   function render() {
     const total = filtered.length;
     const pages = Math.max(1, Math.ceil(total / perPage));
@@ -403,9 +411,9 @@
               ${scoreCell(r.ptScore, r.ptCond)}
               ${scoreCell(r.paScore, r.paCond)}
               ${scoreCell(r.ecScore, r.ecCond, r.ecFalta)}
-              ${scoreCell(r.epScore, r.epCond)}
+              ${calcHtml ? epCalcCell(r, calcHtml) : scoreCell(r.epScore, r.epCond)}
               <td class="num">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}</td>
-              <td><div class="eval-cond">${calcHtml}<div>${condHtml}${ganadoHtml}</div></div></td>
+              <td>${condHtml}${ganadoHtml}</td>
             </tr>`;
           }
         )
