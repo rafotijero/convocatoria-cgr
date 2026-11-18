@@ -11,8 +11,14 @@
     #res-table tr.is-winning { background-color: rgba(34, 197, 94, .07); }
     #res-table tr.is-winning > td:first-child { box-shadow: inset 3px 0 0 #22c55e; }
     .eval-ganando { font-size: .72em; }
-    .eval-etapas { margin-top: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    @media (max-width: 860px) { .eval-etapas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .eval-etapas { margin-top: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    @media (max-width: 1100px) { .eval-etapas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    .eval-cita { white-space: nowrap; font-size: .85rem; line-height: 1.35; }
+    .eval-cita small { color: var(--muted); }
+    .eval-cita.is-pasada { opacity: .6; }
+    .calc-cita { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 14px; }
+    .calc-cita svg { width: 20px; height: 20px; flex: none; color: var(--accent-ink); margin-top: 2px; }
+    .calc-cita p { margin: 0; }
     @media (max-width: 480px) { .eval-etapas { grid-template-columns: 1fr; } }
     .eval-etapa { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
     .eval-etapa legend { padding: 0; margin-bottom: 6px; }
@@ -197,6 +203,17 @@
         </div>
       </fieldset>
 
+      <fieldset class="eval-etapa">
+        <legend class="field__label">EP – Entrevista</legend>
+        <select class="select" id="f-ep-dia" aria-label="Día de la entrevista">
+          <option value="">Cualquier día</option>
+          <option value="prox">Pendientes (desde ahora)</option>
+        </select>
+        <select class="select" id="f-ep-panel" aria-label="Panel de entrevista">
+          <option value="">Todos los paneles</option>
+        </select>
+      </fieldset>
+
       <div class="field field--full">
         <span class="field__label">Consultas rápidas</span>
         <div class="eval-presets" id="eval-presets">
@@ -208,6 +225,8 @@
           <button class="pill" type="button" data-preset="ec=2">Descalificados en EC</button>
           <button class="pill" type="button" data-preset="pt=1&amp;ptmin=11&amp;ptmax=11">Se quedó en 11 en PT</button>
           <button class="pill" type="button" data-preset="ganando=1">Van ganando</button>
+          <button class="pill" type="button" data-preset-hoy>Entrevistas de hoy</button>
+          <button class="pill" type="button" data-preset="epdia=prox">Entrevistas pendientes</button>
         </div>
       </div>
     </div>
@@ -227,6 +246,7 @@
         <option value="dni">Ordenar por DNI</option>
         <option value="acum-desc">Puntaje acumulado ↓</option>
         <option value="acum-asc">Puntaje acumulado ↑</option>
+        <option value="cita">Fecha y hora de entrevista</option>
       </select>
       <label class="sr-only" for="per-page">Filas por página</label>
       <select class="select" id="per-page">
@@ -324,6 +344,7 @@
       </div>
     </header>
     <div class="drawer__body" tabindex="-1">
+      <div class="callout calc-cita" id="c-cita" hidden></div>
       <div class="facts" id="c-facts"></div>
 
       <section class="panel">

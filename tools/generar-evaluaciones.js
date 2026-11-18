@@ -9,6 +9,9 @@
  *   - CPM_06_2026_Resultados_Eva_Curricular_CORREGIDO.xlsx       todas las filas; se usa para validar
  *   - CPM_06_2026_Resultados_Evaluacion_Curricular_CORREGIDO.md/.xlsx  publicación del 12/11, reemplazada;
  *     solo para js/cambios-ec-data.js (reporte de cambios)
+ * Fuentes (archivos/06 Entrevistas):
+ *   - CPM_06_2026_Programacion_Entrevista_Personal.md     panel, fecha y hora de cada finalista
+ *   - CPM_06_2026_Programacion_Entrevista_Personal.xlsx   todas las filas; se usa para validar
  * Uso: node tools/generar-evaluaciones.js
  *
  * Los .md son la conversión (OCR) de los PDF oficiales. Se toman como fuente principal porque
@@ -28,6 +31,13 @@ const OUT    = path.join(ROOT, 'js', 'evaluaciones-data.js');
 const XLSX   = path.join(DIR_04, 'CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx');
 const DIR_05  = path.join(ROOT, 'archivos', '05 Curricular', 'Corregido');
 const OUT_CAMBIOS = path.join(ROOT, 'js', 'cambios-ec-data.js');
+const DIR_06  = path.join(ROOT, 'archivos', '06 Entrevistas');
+const PROG = {
+  file: path.join(DIR_06, 'CPM_06_2026_Programacion_Entrevista_Personal.md'),
+  xlsx: path.join(DIR_06, 'CPM_06_2026_Programacion_Entrevista_Personal.xlsx'),
+  pub: '17 de noviembre de 2026',
+  minutos: 15, // duración de cada entrevista
+};
 
 const ETAPAS = {
   pt: {
@@ -364,6 +374,79 @@ function combine(ptMap, paMap, ecMap) {
   return data;
 }
 
+/* ---------- Programación de entrevistas ---------- */
+// | 1 | DNI | 70032027 | ACHANCARAY NINANTAY, CINDY KIABETH | 471 | PANEL 01 | 18/11/2026 | 10:00:00 | 10:15:00 |
+// Devuelve { dias: ['2026-11-18', …], data: [[dni, panel, iDia, inicio, fin]] } con las horas
+// en minutos desde la medianoche y el documento tal como figura en data.
+function programacion(data) {
+  const aMin = (h) => { const m = h.match(/^(\d{2}):(\d{2}):00$/); return m ? +m[1] * 60 + +m[2] : null; };
+  const aIso = (f) => { const m = f.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
+
+  // Finalistas: CALIFICA en conocimientos, aptitud y curricular
+  const finalistas = new Map(data.filter((r) => r[4] === 0 && r[6] === 0 && r[8] === 0).map((r) => [docKey(r[0]), r]));
+  const filas = [];
+  let esperado = 1;
+
+  fs.readFileSync(PROG.file, 'utf8').split(/\r?\n/).forEach((line, i) => {
+    if (!/^\|\s*\d/.test(line)) return;
+    const c = line.trim().replace(/^\||\|$/g, '').split('|').map((s) => s.trim());
+    const donde = `entrevista línea ${i + 1}`;
+    if (c.length !== 9) { errores.push(`${donde}: columnas inesperadas → ${line.trim()}`); return; }
+    const [n, tipo, doc, nombre, perfil, panel, fecha, ini, fin] = c;
+    const p = panel.match(/^PANEL (\d{2})$/);
+    const fila = { n: +n, tipo, doc, nombre, perfil: +perfil, panel: p ? +p[1] : null, dia: aIso(fecha), ini: aMin(ini), fin: aMin(fin) };
+    if (fila.n !== esperado) errores.push(`${donde}: N° ${n}, se esperaba ${esperado}`);
+    esperado = fila.n + 1;
+    if (!/^(DNI|CE)$/.test(tipo) || !/^\d{8,9}$/.test(doc)) errores.push(`${donde}: documento "${tipo} ${doc}"`);
+    if (fila.panel === null || !fila.dia || fila.ini === null || fila.fin === null) { errores.push(`${donde}: panel, fecha u hora inválidos → ${line.trim()}`); return; }
+    if (fila.fin - fila.ini !== PROG.minutos) errores.push(`${donde}: dura ${fila.fin - fila.ini} min`);
+    filas.push(fila);
+  });
+
+  // Validar contra el Excel (todas las filas)
+  const rows = readSheet(readZip(PROG.xlsx)('xl/worksheets/sheet1.xml'));
+  if (rows.length !== filas.length) errores.push(`entrevista: ${rows.length} filas en el Excel y ${filas.length} en el .md`);
+  rows.forEach((r, i) => {
+    const f = filas[i];
+    const md = f ? [f.n, f.tipo, f.doc, f.nombre, f.perfil, `PANEL ${String(f.panel).padStart(2, '0')}`] : [];
+    const xl = [+r.A, r.B, r.C, r.D, +r.E, r.F];
+    if (!f || md.some((v, k) => v !== xl[k]) || aIso(r.G) !== f.dia || aMin(r.H) !== f.ini || aMin(r.I) !== f.fin) {
+      errores.push(`entrevista Excel N° ${r.A}: no coincide con el .md`);
+    }
+  });
+
+  // Cruce con los finalistas
+  const vistos = new Set();
+  for (const f of filas) {
+    const key = docKey(f.doc);
+    const r = finalistas.get(key);
+    if (vistos.has(key)) errores.push(`entrevista N° ${f.n}: documento ${f.doc} repetido`);
+    vistos.add(key);
+    if (!r) errores.push(`entrevista N° ${f.n}: ${f.doc} no es finalista (CALIFICA en PT, PA y EC)`);
+    else if (r[2] !== f.perfil) errores.push(`entrevista N° ${f.n}: ${f.doc} perfil ${f.perfil} ≠ ${r[2]}`);
+  }
+  for (const [key, r] of finalistas) if (!vistos.has(key)) errores.push(`entrevista: el finalista ${r[0]} no tiene cita`);
+
+  // Un panel no puede tener dos entrevistas que se crucen
+  const porPanel = new Map();
+  filas.forEach((f) => { const k = `${f.panel}|${f.dia}`; if (!porPanel.has(k)) porPanel.set(k, []); porPanel.get(k).push(f); });
+  porPanel.forEach((fs_, k) => {
+    fs_.sort((a, b) => a.ini - b.ini);
+    for (let i = 1; i < fs_.length; i++) {
+      if (fs_[i].ini < fs_[i - 1].fin) errores.push(`entrevista: panel ${k} cruza N° ${fs_[i - 1].n} y N° ${fs_[i].n}`);
+    }
+  });
+
+  const dias = [...new Set(filas.map((f) => f.dia))].sort();
+  const paneles = new Set(filas.map((f) => f.panel)).size;
+  console.log(`  Entrevistas: ${filas.length} citas en ${paneles} paneles y ${dias.length} días, verificadas contra el Excel y los finalistas`);
+  return {
+    pub: PROG.pub,
+    dias,
+    data: filas.map((f) => [finalistas.get(docKey(f.doc)) ? finalistas.get(docKey(f.doc))[0] : f.doc, f.panel, dias.indexOf(f.dia), f.ini, f.fin]),
+  };
+}
+
 /* ---------- Main ---------- */
 function main() {
   console.log('Generando js/evaluaciones-data.js…');
@@ -379,6 +462,7 @@ function main() {
 
   const data = combine(ptMap, paMap, ecMap);
   const cambios = diffCurricular(data, ecPrevMap);
+  const citas = programacion(data);
 
   if (errores.length) {
     console.error(`\n${errores.length} error(es); no se escribió el archivo:`);
@@ -403,6 +487,8 @@ function main() {
       ep: null,
     },
     data,
+    // Programación de la entrevista: [dni, panel, índice en dias, inicio, fin] (minutos)
+    citas,
   };
 
   const header = `/* Generado por tools/generar-evaluaciones.js — ${new Date().toISOString().slice(0, 10)}. No editar a mano. */\n`;

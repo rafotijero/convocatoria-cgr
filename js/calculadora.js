@@ -282,6 +282,23 @@
     ['ffaa', 'disc', 'jov'].forEach((k) => { $(`#c-${k}`).checked = st[k]; });
   }
 
+  /* ---------- Cita de la entrevista ---------- */
+  const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  function renderCita(s) {
+    const el = $('#c-cita');
+    const H = window.CPM_CITA;
+    if (!s.cita || !H) { el.hidden = true; return; }
+    const { dia, ini, fin, panel } = s.cita;
+    const [y, m, d] = dia.split('-').map(Number);
+    const fecha = `${DIAS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} de ${MESES[m - 1]}`;
+    el.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <p><strong>Entrevista: ${fecha}, de ${H.hhmm(ini)} a ${H.hhmm(fin)} · ${H.panelTxt(panel)}</strong><br>
+      <small>Virtual. Conectarse con el DNI 10 minutos antes; el enlace llega al correo registrado en la inscripción.</small></p>`;
+    el.hidden = false;
+  }
+
   /* ---------- Abrir ---------- */
   function open(s, finalistas, perfil) {
     const plazas = perfil ? perfil.posiciones : 0;
@@ -302,6 +319,7 @@
           : distancia === null ? 'es el último puesto ganador'
             : distancia > 0 ? `a ${f1(distancia)} pts de entrevista` : `le saca ${f1(-distancia)} pts de entrevista`}</div></div>`;
 
+    renderCita(s);
     syncControles();
     renderExactos();
     renderRivales();

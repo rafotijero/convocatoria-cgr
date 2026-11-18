@@ -167,6 +167,38 @@
   // Devuelve los CALIFICA de cada perfil en orden de mérito: los usa la calculadora.
   const finalistasPorPerfil = rankear(records, (perfil) => (perfilesMap[perfil] ? perfilesMap[perfil].posiciones : 0));
 
+  /* ---------- Programación de la entrevista ---------- */
+  // D.citas.data: [dni, panel, índice en dias, inicio, fin], horas en minutos desde la medianoche
+  const CITAS = D.citas || { dias: [], data: [] };
+  const DIAS_SEM = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  const diaCorto = (iso) => {
+    const [y, mo, d] = iso.split('-').map(Number);
+    return `${DIAS_SEM[new Date(Date.UTC(y, mo - 1, d)).getUTCDay()]} ${String(d).padStart(2, '0')}/${String(mo).padStart(2, '0')}`;
+  };
+  const panelTxt = (n) => `Panel ${String(n).padStart(2, '0')}`;
+  (function asignarCitas() {
+    const porDni = new Map(records.map((r) => [r.dni, r]));
+    CITAS.data.forEach(([dni, panel, iDia, ini, fin]) => {
+      const r = porDni.get(String(dni).padStart(8, '0')) || porDni.get(dni);
+      if (r) r.cita = { panel, dia: CITAS.dias[iDia], ini, fin };
+    });
+  })();
+
+  // Fecha y hora actuales en Lima, para "hoy" y "pendientes"
+  function ahoraLima() {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(new Date()).map((x) => [x.type, x.value]));
+    return { dia: `${p.year}-${p.month}-${p.day}`, min: +p.hour * 60 + +p.minute };
+  }
+  const citaPendiente = (c, ahora) => c.dia > ahora.dia || (c.dia === ahora.dia && c.fin > ahora.min);
+  const cmpCita = (a, b) => {
+    if (!a.cita || !b.cita) return (!a.cita) - (!b.cita);
+    return a.cita.dia.localeCompare(b.cita.dia) || a.cita.ini - b.cita.ini || a.cita.panel - b.cita.panel;
+  };
+  window.CPM_CITA = { hhmm, diaCorto, panelTxt }; // también los usa la calculadora
+
   function perfilIdFromInput(val) {
     if (!val || !val.trim()) return null;
     const n = parseInt(val, 10);
@@ -191,6 +223,21 @@
   const ecCondEl   = $('f-ec-cond');
   const ecMinEl    = $('f-ec-min');
   const ecMaxEl    = $('f-ec-max');
+  const epDiaEl    = $('f-ep-dia');
+  const epPanelEl  = $('f-ep-panel');
+
+  // Opciones de día y panel, y la consulta rápida "Entrevistas de hoy" si hoy hay entrevistas
+  (function opcionesEntrevista() {
+    CITAS.dias.forEach((d) => epDiaEl.insertAdjacentHTML('beforeend', `<option value="${d}">${diaCorto(d)}</option>`));
+    const paneles = [...new Set(CITAS.data.map((c) => c[1]))].sort((a, b) => a - b);
+    paneles.forEach((n) => epPanelEl.insertAdjacentHTML('beforeend', `<option value="${n}">${panelTxt(n)}</option>`));
+    const hoy = ahoraLima().dia;
+    const btnHoy = document.querySelector('#eval-presets [data-preset-hoy]');
+    if (btnHoy) {
+      if (CITAS.dias.includes(hoy)) btnHoy.dataset.preset = `epdia=${hoy}`;
+      else btnHoy.remove();
+    }
+  })();
   const presetEls  = document.querySelectorAll('#eval-presets [data-preset]');
   const sortEl     = $('sort');
   const clearBtn   = $('clear-filters');
@@ -217,7 +264,15 @@
     rpcTitle.textContent = p.puesto;
     const plazas = `${p.posiciones} plaza${p.posiciones !== 1 ? 's' : ''}`;
     const unidad = p.unidadOrganica && p.unidadOrganica !== p.organo ? p.unidadOrganica : p.organo;
-    rpcMeta.textContent  = `${plazas} · ${unidad}`;
+    // Días y paneles en que se entrevista a los finalistas del perfil
+    const citas = records.filter((r) => r.perfil === id && r.cita).map((r) => r.cita);
+    let ent = '';
+    if (citas.length) {
+      const dias = [...new Set(citas.map((c) => c.dia))].sort().map(diaCorto);
+      const paneles = [...new Set(citas.map((c) => c.panel))].sort((a, b) => a - b).map((n) => String(n).padStart(2, '0'));
+      ent = ` · Entrevistas: ${dias.join(', ')} · Panel${paneles.length > 1 ? 'es' : ''} ${paneles.join(', ')}`;
+    }
+    rpcMeta.textContent  = `${plazas} · ${unidad}${ent}`;
     perfilCard.hidden = false;
   }
 
@@ -237,6 +292,8 @@
     ec:    ecCondEl,
     ecmin: ecMinEl,
     ecmax: ecMaxEl,
+    epdia: epDiaEl,
+    eppanel: epPanelEl,
   };
 
   function getParams() {
@@ -303,6 +360,8 @@
     const ptCondV = ptCondEl.value, ptMin = num(ptMinEl), ptMax = num(ptMaxEl);
     const paCondV = paCondEl.value, paMin = num(paMinEl), paMax = num(paMaxEl);
     const ecCondV = ecCondEl.value, ecMin = num(ecMinEl), ecMax = num(ecMaxEl);
+    const epDiaV  = epDiaEl.value, epPanelV = epPanelEl.value === '' ? null : parseInt(epPanelEl.value, 10);
+    const ahora   = ahoraLima();
 
     filtered = records.filter((r) => {
       if (q && !r._q.includes(q)) return false;
@@ -313,6 +372,9 @@
       // En curricular, 'falta' son quienes calificaron en PA y no figuran; 'none', quienes no llegaron
       if (ecCondV === 'falta' ? !r.ecFalta : ecCondV === 'none' && r.ecFalta) return false;
       if (!matchEtapa(r.ecScore, r.ecCond, ecCondV === 'falta' ? '' : ecCondV, ecMin, ecMax)) return false;
+      // Entrevista: día ('prox' = las que aún no terminan) y panel
+      if (epDiaV !== '' && !(r.cita && (epDiaV === 'prox' ? citaPendiente(r.cita, ahora) : r.cita.dia === epDiaV))) return false;
+      if (epPanelV !== null && !(r.cita && r.cita.panel === epPanelV)) return false;
       if (soloGanando && !r.ganando) return false;
       return true;
     });
@@ -326,6 +388,8 @@
     const sk = sortEl ? sortEl.value : 'dni';
     if (sk === 'acum-desc') {
       filtered = [...filtered].sort(cmpMerito);
+    } else if (sk === 'cita') {
+      filtered = [...filtered].sort(cmpCita);
     } else if (sk === 'acum-asc') {
       filtered = [...filtered].sort((a, b) => {
         if (a.acumulado === null && b.acumulado === null) return 0;
@@ -366,10 +430,19 @@
 
   // Columna de entrevista de un finalista: el botón de la calculadora y, cuando se publique,
   // su puntaje y condición en la entrevista
-  function epCalcCell(r, calcHtml) {
+  // Mientras no haya resultado, muestra la cita (día, hora y panel)
+  function epCalcCell(r, calcHtml, ahora) {
     const tag = r.epCond !== null ? `<small>${COND_TAG[r.epCond]}</small>` : '';
     const nota = r.epScore !== null ? `<span class="eval-score">${Number(r.epScore).toFixed(2)}</span>` : '';
-    return `<td class="num"><div class="eval-ep">${calcHtml}${nota || tag ? `<div>${nota}${nota && tag ? '<br>' : ''}${tag}</div>` : ''}</div></td>`;
+    let info = nota || tag ? `${nota}${nota && tag ? '<br>' : ''}${tag}` : '';
+    if (!info && r.cita) {
+      const c = r.cita;
+      const hoy = c.dia === ahora.dia;
+      const pasada = !citaPendiente(c, ahora);
+      info = `<span class="eval-cita${pasada ? ' is-pasada' : ''}" title="${pasada ? 'Entrevista realizada' : 'Entrevista programada'}: ${diaCorto(c.dia)}, de ${hhmm(c.ini)} a ${hhmm(c.fin)}, ${panelTxt(c.panel)}">
+        ${hoy ? '<span class="tag tag--accent">Hoy</span>' : diaCorto(c.dia)} ${hhmm(c.ini)}<br><small>${panelTxt(c.panel)}</small></span>`;
+    }
+    return `<td class="num"><div class="eval-ep">${info ? `<div>${info}</div>` : ''}${calcHtml}</div></td>`;
   }
 
   function render() {
@@ -388,6 +461,7 @@
 
     const start = (page - 1) * perPage;
     const slice = filtered.slice(start, start + perPage);
+    const ahora = ahoraLima();
 
     if (slice.length === 0) {
       tbody.innerHTML = '';
@@ -411,7 +485,7 @@
               ${scoreCell(r.ptScore, r.ptCond)}
               ${scoreCell(r.paScore, r.paCond)}
               ${scoreCell(r.ecScore, r.ecCond, r.ecFalta)}
-              ${calcHtml ? epCalcCell(r, calcHtml) : scoreCell(r.epScore, r.epCond)}
+              ${calcHtml ? epCalcCell(r, calcHtml, ahora) : scoreCell(r.epScore, r.epCond)}
               <td class="num">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}</td>
               <td>${condHtml}${ganadoHtml}</td>
             </tr>`;
@@ -493,7 +567,7 @@
     });
   }
 
-  [ptCondEl, paCondEl, ecCondEl].forEach((el) => el.addEventListener('change', applyFilters));
+  [ptCondEl, paCondEl, ecCondEl, epDiaEl, epPanelEl].forEach((el) => el.addEventListener('change', applyFilters));
 
   let rangoTimer;
   [ptMinEl, ptMaxEl, paMinEl, paMaxEl, ecMinEl, ecMaxEl].forEach((el) => el.addEventListener('input', () => {
