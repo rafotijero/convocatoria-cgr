@@ -4,10 +4,10 @@
  *   - CPM_06_2026_Resultados_Evaluacion_Conocimientos.md  (PT, peso 30%) — todos los postulantes
  *   - CPM_06_2026_Resultados_Evaluación_Aptitud.md        (PA, peso 20%) — todos los evaluados
  *   - CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx     solo CALIFICA; se usa para validar
- * Fuentes (archivos/05 Curricular):
- *   - CPM_06_2026_Resultados_Eva_Curricular.md            (EC, peso 30%) — todos los evaluados (versión del 17/11)
- *   - CPM_06_2026_Resultados_Eva_Curricular.xlsx          todas las filas; se usa para validar
- *   - CPM_06_2026_Resultados_Evaluacion_Curricular.md/.xlsx  publicación del 12/11, reemplazada;
+ * Fuentes (archivos/05 Curricular/Corregido: incluyen la última página, escaneada, de cada PDF):
+ *   - CPM_06_2026_Resultados_Eva_Curricular_CORREGIDO.md         (EC, peso 30%) — todos los evaluados (versión del 17/11)
+ *   - CPM_06_2026_Resultados_Eva_Curricular_CORREGIDO.xlsx       todas las filas; se usa para validar
+ *   - CPM_06_2026_Resultados_Evaluacion_Curricular_CORREGIDO.md/.xlsx  publicación del 12/11, reemplazada;
  *     solo para js/cambios-ec-data.js (reporte de cambios)
  * Uso: node tools/generar-evaluaciones.js
  *
@@ -26,7 +26,7 @@ const ROOT   = path.resolve(__dirname, '..');
 const DIR_04 = path.join(ROOT, 'archivos', '04 Evaluaciones');
 const OUT    = path.join(ROOT, 'js', 'evaluaciones-data.js');
 const XLSX   = path.join(DIR_04, 'CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx');
-const DIR_05  = path.join(ROOT, 'archivos', '05 Curricular');
+const DIR_05  = path.join(ROOT, 'archivos', '05 Curricular', 'Corregido');
 const OUT_CAMBIOS = path.join(ROOT, 'js', 'cambios-ec-data.js');
 
 const ETAPAS = {
@@ -43,16 +43,16 @@ const ETAPAS = {
     pub: '15 de octubre de 2026',
   },
   ec: {
-    file: path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular.md'),
-    xlsx: path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular.xlsx'),
+    file: path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular_CORREGIDO.md'),
+    xlsx: path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular_CORREGIDO.xlsx'),
     curricular: true,
     label: 'EC – Curricular',
     pub: '17 de noviembre de 2026',
   },
   // Publicación anterior, reemplazada por la del 17/11. Solo se usa para el reporte de cambios.
   ecPrev: {
-    file: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular.md'),
-    xlsx: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular.xlsx'),
+    file: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular_CORREGIDO.md'),
+    xlsx: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular_CORREGIDO.xlsx'),
     curricular: true,
     label: 'EC – Curricular (12/11, reemplazada)',
     pub: '12 de noviembre de 2026',
