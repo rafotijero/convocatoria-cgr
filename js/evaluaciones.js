@@ -24,6 +24,10 @@
     return Math.max(...vals);
   }
 
+  // Con la entrevista publicada el acumulado es el puntaje final (sin bonificaciones)
+  // y la calculadora deja de tener sentido
+  const EP_PUB = Boolean(D.pub && D.pub.ep);
+
   // Calificó en aptitud pero no figura en la publicación curricular ya publicada
   const COND_FALTA_EC = 4;
 
@@ -223,6 +227,9 @@
   const ecCondEl   = $('f-ec-cond');
   const ecMinEl    = $('f-ec-min');
   const ecMaxEl    = $('f-ec-max');
+  const epCondEl   = $('f-ep-cond');
+  const epMinEl    = $('f-ep-min');
+  const epMaxEl    = $('f-ep-max');
   const epDiaEl    = $('f-ep-dia');
   const epPanelEl  = $('f-ep-panel');
 
@@ -292,6 +299,9 @@
     ec:    ecCondEl,
     ecmin: ecMinEl,
     ecmax: ecMaxEl,
+    ep:    epCondEl,
+    epmin: epMinEl,
+    epmax: epMaxEl,
     epdia: epDiaEl,
     eppanel: epPanelEl,
   };
@@ -362,6 +372,7 @@
     const ptCondV = ptCondEl.value, ptMin = num(ptMinEl), ptMax = num(ptMaxEl);
     const paCondV = paCondEl.value, paMin = num(paMinEl), paMax = num(paMaxEl);
     const ecCondV = ecCondEl.value, ecMin = num(ecMinEl), ecMax = num(ecMaxEl);
+    const epCondV = epCondEl.value, epMin = num(epMinEl), epMax = num(epMaxEl);
     const epDiaV  = epDiaEl.value, epPanelV = epPanelEl.value === '' ? null : parseInt(epPanelEl.value, 10);
     const ahora   = ahoraLima();
 
@@ -374,6 +385,7 @@
       // En curricular, 'falta' son quienes calificaron en PA y no figuran; 'none', quienes no llegaron
       if (ecCondV === 'falta' ? !r.ecFalta : ecCondV === 'none' && r.ecFalta) return false;
       if (!matchEtapa(r.ecScore, r.ecCond, ecCondV === 'falta' ? '' : ecCondV, ecMin, ecMax)) return false;
+      if (!matchEtapa(r.epScore, r.epCond, epCondV, epMin, epMax)) return false;
       // Entrevista: día ('prox' = las que aún no terminan) y panel
       if (epDiaV !== '' && !(r.cita && (epDiaV === 'prox' ? citaPendiente(r.cita, ahora) : r.cita.dia === epDiaV))) return false;
       if (epPanelV !== null && !(r.cita && r.cita.panel === epPanelV)) return false;
@@ -484,9 +496,12 @@
         .map(
           (r, i) => {
             const condHtml = r.cond !== null ? COND_TAG[r.cond] : '<span class="muted">—</span>';
-            const ganadoHtml = r.ganando ? '<br><small><span class="tag tag--ok eval-ganando">★ va ganando</span></small>' : '';
-            // Solo los finalistas (CALIFICA en PT, PA y EC) tienen algo que calcular
-            const calcHtml = r.puesto !== null && window.CPM_CALC
+            const ganadoHtml = !r.ganando ? ''
+              : EP_PUB ? '<br><small><span class="tag tag--ok eval-ganando" title="Entre los primeros según las plazas del perfil, antes de bonificaciones. Prevalece el cuadro de méritos oficial.">★ gana plaza</span></small>'
+              : '<br><small><span class="tag tag--ok eval-ganando">★ va ganando</span></small>';
+            // Solo los finalistas (CALIFICA en PT, PA y EC) tienen algo que calcular, y solo
+            // mientras no se publique la entrevista
+            const calcHtml = !EP_PUB && r.puesto !== null && window.CPM_CALC
               ? `<button class="calc-btn" type="button" data-dni="${r.dni}" title="Calcular sus posibilidades de ganar" aria-label="Calcular las posibilidades de ${escHtml(r.nombre || r.dni)}">${ICON_CALC}</button>`
               : '';
             return `<tr${r.ganando ? ' class="is-winning"' : ''}>
@@ -579,10 +594,10 @@
     });
   }
 
-  [ptCondEl, paCondEl, ecCondEl, epDiaEl, epPanelEl].forEach((el) => el.addEventListener('change', applyFilters));
+  [ptCondEl, paCondEl, ecCondEl, epCondEl, epDiaEl, epPanelEl].forEach((el) => el.addEventListener('change', applyFilters));
 
   let rangoTimer;
-  [ptMinEl, ptMaxEl, paMinEl, paMaxEl, ecMinEl, ecMaxEl].forEach((el) => el.addEventListener('input', () => {
+  [ptMinEl, ptMaxEl, paMinEl, paMaxEl, ecMinEl, ecMaxEl, epMinEl, epMaxEl].forEach((el) => el.addEventListener('input', () => {
     clearTimeout(rangoTimer);
     rangoTimer = setTimeout(applyFilters, 220);
   }));

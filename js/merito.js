@@ -18,14 +18,16 @@
   }
 
   /* ---------- Orden de mérito ---------- */
-  // Mayor acumulado; en empate, mayor puntaje en conocimientos y luego en curricular
-  // (criterios 1 y 2 de desempate de las bases). Los registros sin acumulado van al final.
-  const sc = (v) => (v === null ? -1 : v);
+  // Mayor acumulado; en empate, mayor puntaje en conocimientos, luego en curricular y luego
+  // en la entrevista (criterios 1 a 3 de desempate de las bases). Los registros sin acumulado
+  // van al final.
+  const sc = (v) => (v == null ? -1 : v);
   function cmpMerito(a, b) {
     if (a.acumulado === null || b.acumulado === null) {
       return (a.acumulado === null) - (b.acumulado === null);
     }
-    return (b.acumulado - a.acumulado) || (sc(b.ptScore) - sc(a.ptScore)) || (sc(b.ecScore) - sc(a.ecScore));
+    return (b.acumulado - a.acumulado) || (sc(b.ptScore) - sc(a.ptScore)) || (sc(b.ecScore) - sc(a.ecScore)) ||
+      (sc(b.epScore) - sc(a.epScore));
   }
 
   /* ---------- Puestos y "va ganando" por perfil ---------- */

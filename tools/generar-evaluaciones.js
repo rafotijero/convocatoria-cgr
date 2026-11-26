@@ -12,6 +12,8 @@
  * Fuentes (archivos/06 Entrevistas):
  *   - CPM_06_2026_Programacion_Entrevista_Personal.md     panel, fecha y hora de cada finalista
  *   - CPM_06_2026_Programacion_Entrevista_Personal.xlsx   todas las filas; se usa para validar
+ *   - CPM_06_2026_Resultados_Etapa_Entrevista_Personal.md   (EP, peso 20%) — todos los entrevistados
+ *   - CPM_06_2026_Resultados_Etapa_Entrevista_Personal.xlsx todas las filas; se usa para validar
  * Uso: node tools/generar-evaluaciones.js
  *
  * Los .md son la conversión (OCR) de los PDF oficiales. Se toman como fuente principal porque
@@ -37,6 +39,11 @@ const PROG = {
   xlsx: path.join(DIR_06, 'CPM_06_2026_Programacion_Entrevista_Personal.xlsx'),
   pub: '17 de noviembre de 2026',
   minutos: 15, // duración de cada entrevista
+};
+const EP = {
+  file: path.join(DIR_06, 'CPM_06_2026_Resultados_Etapa_Entrevista_Personal.md'),
+  xlsx: path.join(DIR_06, 'CPM_06_2026_Resultados_Etapa_Entrevista_Personal.xlsx'),
+  pub: '25 de noviembre de 2026',
 };
 
 const ETAPAS = {
@@ -229,7 +236,7 @@ function readZip(file) {
   };
 }
 
-const unxml = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+const unxml = (s) => s.replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n)).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
   .replace(/&apos;/g, "'").replace(/&amp;/g, '&');
 
 // Devuelve las filas de datos (desde el encabezado N°) como { A: valor, B: valor, ... }
@@ -352,7 +359,7 @@ function combine(ptMap, paMap, ecMap) {
       avisos.push(`${dni} (perfil ${pa.perfil}, ${pa.nombre}) calificó en aptitud y no figura en curricular`);
     }
 
-    // [dni, nombre, perfil, pt_score, pt_cond, pa_score, pa_cond, ec_score, ec_cond]
+    // [dni, nombre, perfil, pt_score, pt_cond, pa_score, pa_cond, ec_score, ec_cond] (+ ep_score, ep_cond)
     data.push([
       dni,
       (pt && pt.nombre) || (pa && pa.nombre) || (ec && ec.nombre) || null,
@@ -447,6 +454,78 @@ function programacion(data) {
   };
 }
 
+/* ---------- Resultados de la entrevista personal ---------- */
+// | 1 | DNI | 41659364 | ACUÑA ROMAN, GUILER | 471 | 12.5 | CALIFICA |
+// | 3968 | DNI | 71037209 |  | 471 | - | DESCALIFICA |   (sin nombre ni puntaje)
+// Agrega a cada registro de data [.., ep_score, ep_cond]. Exige que cada finalista tenga resultado
+// y que puntaje y condición sean coherentes; quien figura sin ser finalista se informa como aviso.
+function entrevista(data) {
+  const porKey = new Map(data.map((r) => [docKey(r[0]), r]));
+  const finalista = (r) => r[4] === 0 && r[6] === 0 && r[8] === 0;
+  const filas = [];
+  const conteo = CONDS.map(() => 0);
+  let esperado = 1;
+
+  fs.readFileSync(EP.file, 'utf8').split(/\r?\n/).forEach((line, i) => {
+    if (!/^\|\s*\d/.test(line)) return;
+    const c = line.trim().replace(/^\||\|$/g, '').split('|').map((s) => s.trim());
+    const donde = `ep línea ${i + 1}`;
+    if (c.length !== 7) { errores.push(`${donde}: columnas inesperadas → ${line.trim()}`); return; }
+    const [n, tipo, doc, nombre, perfil, puntaje, cond] = c;
+    const condIdx = CONDS.indexOf(cond);
+    if (+n !== esperado) errores.push(`${donde}: N° ${n}, se esperaba ${esperado}`);
+    esperado = +n + 1;
+    if (!/^(DNI|CE)$/.test(tipo) || !/^\d{8,9}$/.test(doc)) { errores.push(`${donde}: documento "${tipo} ${doc}"`); return; }
+    if (!/^\d+$/.test(perfil)) { errores.push(`${donde}: perfil "${perfil}"`); return; }
+    if (condIdx < 0) { errores.push(`${donde}: condición "${cond}"`); return; }
+    if (puntaje !== '-' && !/^\d+(\.\d+)?$/.test(puntaje)) { errores.push(`${donde}: puntaje "${puntaje}"`); return; }
+    const f = { n: +n, tipo, doc, nombre: nombre || null, perfil: +perfil, puntaje: puntaje === '-' ? null : parseFloat(puntaje), cond: condIdx };
+
+    // CALIFICA con 12 a 20; NO CALIFICA con menos de 12 (sin puntaje se avisa);
+    // DESCALIFICA y NO SE PRESENTÓ sin puntaje
+    if (f.puntaje !== null && f.puntaje > 20) errores.push(`${donde}: puntaje ${f.puntaje} mayor que 20`);
+    else if (f.cond === 0 && (f.puntaje === null || f.puntaje < NOTA_MINIMA)) errores.push(`${donde}: CALIFICA con puntaje "${puntaje}"`);
+    else if (f.cond === 1 && f.puntaje !== null && f.puntaje >= NOTA_MINIMA) errores.push(`${donde}: NO CALIFICA con puntaje ${f.puntaje}`);
+    else if (f.cond === 1 && f.puntaje === null) avisos.push(`entrevista N° ${f.n}: ${f.doc} (perfil ${f.perfil}) NO CALIFICA sin puntaje`);
+    else if (f.cond >= 2 && f.puntaje !== null) errores.push(`${donde}: ${cond} con puntaje ${f.puntaje}`);
+    if (f.cond === 0 && !f.nombre) errores.push(`${donde}: CALIFICA sin nombre`);
+
+    filas.push(f);
+    conteo[f.cond]++;
+  });
+
+  // Validar contra el Excel (todas las filas)
+  const rows = readSheet(readZip(EP.xlsx)('xl/worksheets/sheet1.xml'));
+  if (rows.length !== filas.length) errores.push(`ep: ${rows.length} filas en el Excel y ${filas.length} en el .md`);
+  rows.forEach((r, i) => {
+    const f = filas[i];
+    const xlPuntaje = r.F === undefined || r.F === '-' ? null : parseFloat(r.F);
+    if (!f || f.n !== +r.A || f.tipo !== r.B || f.doc !== r.C || (f.nombre || '') !== (r.D || '') ||
+        f.perfil !== +r.E || f.puntaje !== xlPuntaje || CONDS[f.cond] !== r.G) {
+      errores.push(`ep Excel N° ${r.A} (${r.C}): no coincide con el .md`);
+    }
+  });
+
+  // Cruce con los registros: mismo perfil y una sola vez; cada finalista debe tener resultado
+  const vistos = new Set();
+  for (const f of filas) {
+    const key = docKey(f.doc);
+    const r = porKey.get(key);
+    if (vistos.has(key)) { errores.push(`ep N° ${f.n}: documento ${f.doc} repetido`); continue; }
+    vistos.add(key);
+    if (!r) { errores.push(`ep N° ${f.n}: ${f.doc} no figura en conocimientos`); continue; }
+    if (r[2] !== f.perfil) errores.push(`ep N° ${f.n}: ${f.doc} perfil ${f.perfil} ≠ ${r[2]}`);
+    if (!finalista(r)) avisos.push(`entrevista N° ${f.n}: ${f.doc} (perfil ${f.perfil}) figura en la entrevista sin ser finalista (EC: ${r[8] === null ? 'sin resultado' : CONDS[r[8]]})`);
+    if (f.nombre && r[1] && f.nombre !== r[1]) avisos.push(`entrevista N° ${f.n}: ${f.doc} nombre "${f.nombre}" ≠ "${r[1]}"`);
+    r[9] = f.puntaje;
+    r[10] = f.cond;
+  }
+  for (const [key, r] of porKey) if (finalista(r) && !vistos.has(key)) errores.push(`ep: el finalista ${r[0]} no tiene resultado de entrevista`);
+
+  const resumen = CONDS.map((c, i) => conteo[i] && `${c}: ${conteo[i]}`).filter(Boolean).join(' · ');
+  console.log(`  EP – Entrevista: ${filas.length} filas (${resumen}), verificadas contra el Excel y los finalistas`);
+}
+
 /* ---------- Main ---------- */
 function main() {
   console.log('Generando js/evaluaciones-data.js…');
@@ -463,6 +542,7 @@ function main() {
   const data = combine(ptMap, paMap, ecMap);
   const cambios = diffCurricular(data, ecPrevMap);
   const citas = programacion(data);
+  entrevista(data);
 
   if (errores.length) {
     console.error(`\n${errores.length} error(es); no se escribió el archivo:`);
@@ -484,7 +564,7 @@ function main() {
       pt: ETAPAS.pt.pub,
       pa: ETAPAS.pa.pub,
       ec: ETAPAS.ec.pub,
-      ep: null,
+      ep: EP.pub,
     },
     data,
     // Programación de la entrevista: [dni, panel, índice en dias, inicio, fin] (minutos)
