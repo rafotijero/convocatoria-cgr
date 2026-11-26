@@ -40,6 +40,12 @@ const PROG = {
   pub: '17 de noviembre de 2026',
   minutos: 15, // duración de cada entrevista
 };
+// Comunicado del 24/11: rectifica la curricular de algunos postulantes ("Dice" / "Debe decir")
+// y programa la entrevista de quien pasó a CALIFICA. Transcripción del PDF escaneado.
+const RECT = {
+  file: path.join(ROOT, 'archivos', '05 Curricular', 'Comunicado261124.md'),
+  pub: '24 de noviembre',
+};
 const EP = {
   file: path.join(DIR_06, 'CPM_06_2026_Resultados_Etapa_Entrevista_Personal.md'),
   xlsx: path.join(DIR_06, 'CPM_06_2026_Resultados_Etapa_Entrevista_Personal.xlsx'),
@@ -64,7 +70,7 @@ const ETAPAS = {
     xlsx: path.join(DIR_05, 'CPM_06_2026_Resultados_Eva_Curricular_CORREGIDO.xlsx'),
     curricular: true,
     label: 'EC – Curricular',
-    pub: '17 de noviembre de 2026',
+    pub: '17 de noviembre de 2026, rectificada el 24 de noviembre',
   },
   // Publicación anterior, reemplazada por la del 17/11. Solo se usa para el reporte de cambios.
   ecPrev: {
@@ -381,11 +387,49 @@ function combine(ptMap, paMap, ecMap) {
   return data;
 }
 
+/* ---------- Rectificación de la curricular (comunicado del 24/11) ---------- */
+// Lee las tablas "Dice", "Debe decir" y la programación de entrevista del comunicado.
+// Cada fila de "Dice" debe coincidir con la publicación curricular (N°, documento, perfil,
+// puntaje y condición); luego se aplica "Debe decir" sobre ecMap. Devuelve las citas nuevas.
+function rectificacion(ecMap) {
+  const tablas = { dice: [], debe: [], cita: [] };
+  let actual = null;
+  fs.readFileSync(RECT.file, 'utf8').split(/\r?\n/).forEach((line) => {
+    if (/^###\s+Dice/.test(line)) actual = 'dice';
+    else if (/^###\s+Debe decir/.test(line)) actual = 'debe';
+    else if (/^###\s+Etapa de Entrevista/.test(line)) actual = 'cita';
+    else if (actual && /^\|\s*\d/.test(line)) tablas[actual].push(line.trim().replace(/^\||\|$/g, '').split('|').map((s) => s.trim()));
+  });
+  if (!tablas.dice.length || tablas.dice.length !== tablas.debe.length) {
+    errores.push(`rectificación: ${tablas.dice.length} filas en "Dice" y ${tablas.debe.length} en "Debe decir"`);
+    return [];
+  }
+
+  const leer = ([n, tipo, doc, , perfil, puntaje, cond]) =>
+    ({ n: +n, tipo, doc, perfil: +perfil, puntaje: puntaje === '-' || puntaje === '' ? null : parseFloat(puntaje), cond: CONDS.indexOf(cond) });
+  tablas.dice.forEach((c, i) => {
+    const dice = leer(c), debe = leer(tablas.debe[i]);
+    const donde = `rectificación N° ${dice.n} (${dice.doc})`;
+    const ec = ecMap.get(dice.doc);
+    if (!ec) { errores.push(`${donde}: no figura en la curricular`); return; }
+    if (debe.doc !== dice.doc || debe.n !== dice.n || debe.perfil !== dice.perfil) errores.push(`${donde}: "Debe decir" no corresponde a la misma fila`);
+    if (ec.n !== dice.n || ec.perfil !== dice.perfil || ec.puntaje !== dice.puntaje || ec.cond !== dice.cond) {
+      errores.push(`${donde}: "Dice" no coincide con la publicación (${ec.puntaje ?? '-'} ${CONDS[ec.cond]})`);
+    }
+    if (debe.cond < 0 || (debe.cond === 0) !== (debe.puntaje !== null && debe.puntaje >= NOTA_MINIMA)) errores.push(`${donde}: "Debe decir" incoherente`);
+    ec.puntaje = debe.puntaje;
+    ec.cond = debe.cond;
+    if (!ec.nombre && c[3]) ec.nombre = c[3];
+  });
+  console.log(`  Rectificación del ${RECT.pub}: ${tablas.dice.length} resultados curriculares corregidos, ${tablas.cita.length} cita(s) nueva(s)`);
+  return tablas.cita;
+}
+
 /* ---------- Programación de entrevistas ---------- */
 // | 1 | DNI | 70032027 | ACHANCARAY NINANTAY, CINDY KIABETH | 471 | PANEL 01 | 18/11/2026 | 10:00:00 | 10:15:00 |
 // Devuelve { dias: ['2026-11-18', …], data: [[dni, panel, iDia, inicio, fin]] } con las horas
 // en minutos desde la medianoche y el documento tal como figura en data.
-function programacion(data) {
+function programacion(data, citasExtra = []) {
   const aMin = (h) => { const m = h.match(/^(\d{2}):(\d{2}):00$/); return m ? +m[1] * 60 + +m[2] : null; };
   const aIso = (f) => { const m = f.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? `${m[3]}-${m[2]}-${m[1]}` : null; };
 
@@ -420,6 +464,15 @@ function programacion(data) {
     if (!f || md.some((v, k) => v !== xl[k]) || aIso(r.G) !== f.dia || aMin(r.H) !== f.ini || aMin(r.I) !== f.fin) {
       errores.push(`entrevista Excel N° ${r.A}: no coincide con el .md`);
     }
+  });
+
+  // Citas programadas después, por comunicado (sin N° correlativo en la programación)
+  citasExtra.forEach(([n, tipo, doc, nombre, perfil, panel, fecha, ini, fin]) => {
+    const p = panel.match(/^PANEL (\d{2})$/);
+    const fila = { n: `comunicado ${n}`, tipo, doc, nombre, perfil: +perfil, panel: p ? +p[1] : null, dia: aIso(fecha), ini: aMin(ini), fin: aMin(fin) };
+    if (fila.panel === null || !fila.dia || fila.ini === null || fila.fin === null) { errores.push(`cita del comunicado ${doc}: panel, fecha u hora inválidos`); return; }
+    if (fila.fin - fila.ini !== PROG.minutos) errores.push(`cita del comunicado ${doc}: dura ${fila.fin - fila.ini} min`);
+    filas.push(fila);
   });
 
   // Cruce con los finalistas
@@ -537,11 +590,12 @@ function main() {
   validarExcel('pt', ptMap);
   validarExcel('pa', paMap);
   validarExcelEC('ec', ecMap);
+  const citasExtra = rectificacion(ecMap);
   validarExcelEC('ecPrev', ecPrevMap);
 
   const data = combine(ptMap, paMap, ecMap);
   const cambios = diffCurricular(data, ecPrevMap);
-  const citas = programacion(data);
+  const citas = programacion(data, citasExtra);
   entrevista(data);
 
   if (errores.length) {
