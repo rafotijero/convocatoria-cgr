@@ -286,7 +286,8 @@
           <button class="pill" type="button" data-preset="epmin=20">20 en entrevista</button>
           <button class="pill" type="button" data-preset="ec=0&amp;ep=1">Pasó EC y no EP</button>
           <button class="pill" type="button" data-preset="ep=3">No se presentó a la entrevista</button>
-          <button class="pill" type="button" data-preset="ganando=1">Ganan plaza</button>
+          <button class="pill" type="button" data-preset="ganando=1">Ganadores</button>
+          <button class="pill" type="button" data-preset="accesitario=1">Accesitarios</button>
         </div>
       </div>
     </div>
@@ -305,8 +306,9 @@
       <select class="select" id="sort">
         <option value="dni">Ordenar por DNI</option>
         <option value="nombre">Apellidos y nombres (A–Z)</option>
-        <option value="acum-desc">Puntaje acumulado ↓</option>
-        <option value="acum-asc">Puntaje acumulado ↑</option>
+        <option value="merito">Cuadro de méritos (perfil y orden)</option>
+        <option value="acum-desc">Puntaje final ↓</option>
+        <option value="acum-asc">Puntaje final ↑</option>
         <option value="cita">Fecha y hora de entrevista</option>
       </select>
       <label class="sr-only" for="per-page">Filas por página</label>
@@ -345,7 +347,7 @@
           <th class="num" title="Aptitud, 20% del puntaje final">PA<small>Aptitud · 20%</small></th>
           <th class="num" title="Curricular, 30% del puntaje final">EC<small>Curricular · 30%</small></th>
           <th class="num" title="Entrevista, 20% del puntaje final">EP<small>Entrevista · 20%</small></th>
-          <th class="num" title="Suma ponderada de las cuatro etapas, sobre 20, antes de bonificaciones">Final<small>de 20</small></th>
+          <th class="num" title="Puntaje final del cuadro de méritos oficial, con bonificaciones de ley (puede pasar de 20); para quienes no figuran, suma ponderada de las etapas publicadas">Final<small>oficial</small></th>
           <th>Condición</th>
         </tr>
       </thead>

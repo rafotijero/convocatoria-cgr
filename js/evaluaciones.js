@@ -131,6 +131,7 @@
       if (pub.pa) parts.push(`PA: ${pub.pa}`);
       if (pub.ec) parts.push(`EC: ${pub.ec}`);
       if (pub.ep) parts.push(`EP: ${pub.ep}`);
+      if (D.final) parts.push(`Resultados finales: ${D.final.pub}`);
       text = parts.join(' · ') + ' · CPM N° 06-2026-CG';
     }
     const el = $('eval-pub-info');
@@ -170,6 +171,27 @@
   // donde N = número de plazas del perfil (ver js/merito.js).
   // Devuelve los CALIFICA de cada perfil en orden de mérito: los usa la calculadora.
   const finalistasPorPerfil = rankear(records, (perfil) => (perfilesMap[perfil] ? perfilesMap[perfil].posiciones : 0));
+
+  /* ---------- Cuadro de méritos oficial ---------- */
+  // Con los resultados finales publicados, el puntaje final (con bonificaciones de ley), el
+  // orden de mérito y quién gana son los oficiales, no el cálculo propio.
+  // D.final.data: [dni, puntaje final, orden, 0 = GANADOR/A | 1 = ACCESITARIO/A, desempate]
+  const FINAL = D.final || null;
+  if (FINAL) {
+    const porDni = new Map(FINAL.data.map((f) => [f[0], f]));
+    records.forEach((r) => {
+      r.puesto = null;
+      r.ganando = false;
+      r.accesitario = false;
+      const f = porDni.get(r.dni) || porDni.get(String(r.dni).replace(/^0+/, ''));
+      if (!f) return;
+      r.acumulado = f[1];
+      r.puesto = f[2];
+      r.ganando = f[3] === 0;
+      r.accesitario = f[3] === 1;
+      r.desempate = f[4] === 1;
+    });
+  }
 
   /* ---------- Programación de la entrevista ---------- */
   // D.citas.data: [dni, panel, índice en dias, inicio, fin], horas en minutos desde la medianoche
@@ -288,6 +310,7 @@
   // así las consultas rápidas, la URL y el formulario comparten una sola representación.
   // La búsqueda por nombre o DNI queda fuera para no dejar datos personales en enlaces.
   let soloGanando = false;
+  let soloAccesitario = false;
   const CAMPOS = {
     cond:  condEl,
     pt:    ptCondEl,
@@ -312,6 +335,8 @@
     if (perfilV !== null) p.set('perfil', perfilV);
     Object.entries(CAMPOS).forEach(([k, el]) => { if (el.value.trim() !== '') p.set(k, el.value.trim()); });
     if (soloGanando) p.set('ganando', '1');
+    if (soloAccesitario) p.set('accesitario', '1');
+    if (sortEl.value !== 'dni') p.set('sort', sortEl.value);
     return p;
   }
 
@@ -327,6 +352,10 @@
     }
     Object.entries(CAMPOS).forEach(([k, el]) => { el.value = p.get(k) || ''; });
     soloGanando = p.get('ganando') === '1';
+    soloAccesitario = p.get('accesitario') === '1';
+    // El orden solo cambia si la URL lo indica (las consultas rápidas lo conservan)
+    const sort = p.get('sort');
+    if (sort && [...sortEl.options].some((o) => o.value === sort)) sortEl.value = sort;
     syncKpis();
   }
 
@@ -338,6 +367,7 @@
   function syncPresets(current) {
     const cur = new URLSearchParams(current);
     cur.delete('perfil');
+    cur.delete('sort');
     cur.sort();
     presetEls.forEach((b) => {
       const pre = new URLSearchParams(b.dataset.preset);
@@ -390,6 +420,7 @@
       if (epDiaV !== '' && !(r.cita && (epDiaV === 'prox' ? citaPendiente(r.cita, ahora) : r.cita.dia === epDiaV))) return false;
       if (epPanelV !== null && !(r.cita && r.cita.panel === epPanelV)) return false;
       if (soloGanando && !r.ganando) return false;
+      if (soloAccesitario && !r.accesitario) return false;
       return true;
     });
 
@@ -401,7 +432,14 @@
     // Ordenar: nulls siempre al final
     const sk = sortEl ? sortEl.value : 'dni';
     if (sk === 'acum-desc') {
-      filtered = [...filtered].sort(cmpMerito);
+      // En empate dentro de un perfil manda el orden oficial (los desempates por experiencia
+      // no están en los datos)
+      filtered = [...filtered].sort((a, b) =>
+        (FINAL && a.perfil === b.perfil && a.puesto && b.puesto && a.acumulado === b.acumulado) ? a.puesto - b.puesto : cmpMerito(a, b));
+    } else if (sk === 'merito') {
+      // Cuadro de méritos: por perfil y orden oficial; quienes no figuran, al final
+      filtered = [...filtered].sort((a, b) =>
+        (!a.puesto) - (!b.puesto) || (a.puesto ? a.perfil - b.perfil || a.puesto - b.puesto : cmpMerito(a, b)));
     } else if (sk === 'cita') {
       filtered = [...filtered].sort(cmpCita);
     } else if (sk === 'nombre') {
@@ -496,7 +534,10 @@
         .map(
           (r, i) => {
             const condHtml = r.cond !== null ? COND_TAG[r.cond] : '<span class="muted">—</span>';
-            const ganadoHtml = !r.ganando ? ''
+            const ganadoHtml = FINAL
+              ? (r.ganando ? `<br><small><span class="tag tag--ok eval-ganando" title="Cuadro de méritos oficial: orden ${r.puesto} del perfil">★ GANADOR/A · ${r.puesto}°</span></small>`
+                : r.accesitario ? `<br><small><span class="tag eval-ganando" title="Cuadro de méritos oficial: orden ${r.puesto} del perfil">ACCESITARIO/A · ${r.puesto}°</span></small>` : '')
+              : !r.ganando ? ''
               : EP_PUB ? '<br><small><span class="tag tag--ok eval-ganando" title="Entre los primeros según las plazas del perfil, antes de bonificaciones. Prevalece el cuadro de méritos oficial.">★ gana plaza</span></small>'
               : '<br><small><span class="tag tag--ok eval-ganando">★ va ganando</span></small>';
             // Solo los finalistas (CALIFICA en PT, PA y EC) tienen algo que calcular, y solo
@@ -513,7 +554,7 @@
               ${scoreCell('PA – Aptitud', r.paScore, r.paCond)}
               ${scoreCell('EC – Curricular', r.ecScore, r.ecCond, r.ecFalta)}
               ${calcHtml ? epCalcCell(r, calcHtml, ahora) : scoreCell('EP – Entrevista', r.epScore, r.epCond)}
-              <td class="num" data-label="Acumulado">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}</td>
+              <td class="num" data-label="${FINAL ? 'Puntaje final' : 'Acumulado'}">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}${r.desempate ? '<sup title="Se aplicaron los criterios de desempate (numeral 3.6 de las bases)">(*)</sup>' : ''}</td>
               <td data-label="Condición">${condHtml}${ganadoHtml}</td>
             </tr>`;
           }

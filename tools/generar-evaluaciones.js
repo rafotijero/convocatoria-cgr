@@ -14,6 +14,8 @@
  *   - CPM_06_2026_Programacion_Entrevista_Personal.xlsx   todas las filas; se usa para validar
  *   - CPM_06_2026_Resultados_Etapa_Entrevista_Personal.md   (EP, peso 20%) — todos los entrevistados
  *   - CPM_06_2026_Resultados_Etapa_Entrevista_Personal.xlsx todas las filas; se usa para validar
+ * Fuentes (archivos/07 Resultado final):
+ *   - CPM_06_2026_Resultados_Finales.md / .xlsx   cuadro de méritos con puntaje final, orden y condición
  * Uso: node tools/generar-evaluaciones.js
  *
  * Los .md son la conversión (OCR) de los PDF oficiales. Se toman como fuente principal porque
@@ -45,6 +47,13 @@ const PROG = {
 const RECT = {
   file: path.join(ROOT, 'archivos', '05 Curricular', 'Comunicado261124.md'),
   pub: '24 de noviembre',
+};
+// Resultados finales y cuadro de méritos (incluye bonificaciones de ley y desempates)
+const FINAL = {
+  file: path.join(ROOT, 'archivos', '07 Resultado final', 'CPM_06_2026_Resultados_Finales.md'),
+  xlsx: path.join(ROOT, 'archivos', '07 Resultado final', 'CPM_06_2026_Resultados_Finales.xlsx'),
+  perfiles: path.join(ROOT, 'js', 'data.js'), // plazas de cada perfil
+  pub: '26 de noviembre de 2026',
 };
 const EP = {
   file: path.join(DIR_06, 'CPM_06_2026_Resultados_Etapa_Entrevista_Personal.md'),
@@ -579,6 +588,90 @@ function entrevista(data) {
   console.log(`  EP – Entrevista: ${filas.length} filas (${resumen}), verificadas contra el Excel y los finalistas`);
 }
 
+/* ---------- Resultados finales: cuadro de méritos ---------- */
+// | 8 | DNI | 72366082(*) | SERVAN VASQUEZ, JULINHO | 403 | 16.00 | 15.50 | 16.00 | 12.00 | 15.10 | 8 | ACCESITARIO/A |
+// (*) = se aplicaron los criterios de desempate. Verifica fila por fila contra el Excel, que las
+// notas de cada etapa sean las ya publicadas, que estén todos los CALIFICA de la entrevista,
+// que el puntaje final no sea menor que la suma ponderada ni exceda el máximo con
+// bonificaciones, y que en cada perfil el orden sea correlativo y ganen los primeros según
+// sus plazas. Devuelve [dni, puntaje final, orden, 0 = GANADOR/A | 1 = ACCESITARIO/A, desempate].
+function resultadosFinales(data) {
+  const CONDS_F = ['GANADOR/A', 'ACCESITARIO/A'];
+  const porKey = new Map(data.map((r) => [docKey(r[0]), r]));
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const ctx = { window: {} };
+  require('vm').runInNewContext(fs.readFileSync(FINAL.perfiles, 'utf8'), ctx);
+  const plazas = new Map(ctx.window.CPM_DATA.perfiles.map((p) => [parseInt(p.id, 10), p.posiciones]));
+
+  const filas = [];
+  let esperado = 1;
+  fs.readFileSync(FINAL.file, 'utf8').split(/\r?\n/).forEach((line, i) => {
+    if (!/^\|\s*\d/.test(line)) return;
+    const c = line.trim().replace(/^\||\|$/g, '').split('|').map((s) => s.trim());
+    const donde = `final línea ${i + 1}`;
+    if (c.length !== 12) { errores.push(`${donde}: columnas inesperadas → ${line.trim()}`); return; }
+    const [n, tipo, docRaw, nombre, perfil, pt, pa, ec, ep, final, orden, cond] = c;
+    const m = docRaw.match(/^(\d{8,9})(\(\*\))?$/);
+    const nums = [pt, pa, ec, ep, final].map(Number);
+    if (+n !== esperado) errores.push(`${donde}: N° ${n}, se esperaba ${esperado}`);
+    esperado = +n + 1;
+    if (!/^(DNI|CE)$/.test(tipo) || !m) { errores.push(`${donde}: documento "${tipo} ${docRaw}"`); return; }
+    if (nums.some((x) => !(x >= 0)) || !/^\d+$/.test(orden) || !CONDS_F.includes(cond)) { errores.push(`${donde}: valores inválidos → ${line.trim()}`); return; }
+    filas.push({ n: +n, tipo, docRaw, doc: m[1], desempate: Boolean(m[2]), nombre, perfil: +perfil, notas: nums.slice(0, 4), final: nums[4], orden: +orden, cond: CONDS_F.indexOf(cond) });
+  });
+
+  // Excel (todas las filas, mismo orden)
+  const rows = readSheet(readZip(FINAL.xlsx)('xl/worksheets/sheet1.xml'));
+  if (rows.length !== filas.length) errores.push(`final: ${rows.length} filas en el Excel y ${filas.length} en el .md`);
+  rows.forEach((r, i) => {
+    const f = filas[i];
+    const xl = [+r.A, r.B, r.C, r.D, +r.E, +r.F, +r.G, +r.H, +r.I, +r.J, +r.K, r.L];
+    const md = f && [f.n, f.tipo, f.docRaw, f.nombre, f.perfil, ...f.notas, f.final, f.orden, CONDS_F[f.cond]];
+    if (!md || md.some((v, k) => v !== xl[k])) errores.push(`final Excel N° ${r.A} (${r.C}): no coincide con el .md`);
+  });
+
+  // Cruce con las etapas publicadas
+  const vistos = new Set();
+  const porPerfil = new Map();
+  for (const f of filas) {
+    const key = docKey(f.doc);
+    const r = porKey.get(key);
+    const donde = `final N° ${f.n} (${f.doc})`;
+    if (vistos.has(key)) { errores.push(`${donde}: documento repetido`); continue; }
+    vistos.add(key);
+    if (!r) { errores.push(`${donde}: no figura en las evaluaciones`); continue; }
+    if (r[2] !== f.perfil) errores.push(`${donde}: perfil ${f.perfil} ≠ ${r[2]}`);
+    if (r[10] !== 0) errores.push(`${donde}: no calificó en la entrevista`);
+    const [pt, pa, ec, ep] = f.notas;
+    if (r[3] !== pt || r[5] !== pa || r[7] !== ec || r[9] !== ep) errores.push(`${donde}: notas ${f.notas.join('/')} ≠ ${[r[3], r[5], r[7], r[9]].join('/')}`);
+    // Sin bonificación el final es la suma ponderada; con todas (FF. AA. 10% y discapacidad 15%
+    // sobre el total, jóvenes hasta 13% de la entrevista) no puede pasar de este máximo
+    const base = r2(pt * 0.3 + pa * 0.2 + ec * 0.3 + ep * 0.2);
+    const maximo = r2((base + ep * 0.2 * 0.13) * 1.25);
+    if (f.final < base - 0.005 || f.final > maximo + 0.005) errores.push(`${donde}: puntaje final ${f.final} fuera de ${base} a ${maximo}`);
+    if (!porPerfil.has(f.perfil)) porPerfil.set(f.perfil, []);
+    porPerfil.get(f.perfil).push(f);
+  }
+  for (const [key, r] of porKey) if (r[10] === 0 && !vistos.has(key)) errores.push(`final: ${r[0]} calificó en la entrevista y no figura`);
+
+  // Orden de mérito y ganadores por perfil
+  let ganadores = 0, desempates = 0;
+  porPerfil.forEach((grupo, perfil) => {
+    grupo.forEach((f, i) => {
+      if (f.orden !== i + 1) errores.push(`final perfil ${perfil}: orden ${f.orden} en la posición ${i + 1}`);
+      if (i && f.final > grupo[i - 1].final) errores.push(`final perfil ${perfil}: orden ${f.orden} con más puntaje que el anterior`);
+      if ((f.cond === 0) !== (i < (plazas.get(perfil) || 0))) errores.push(`final perfil ${perfil}: orden ${f.orden} ${CONDS_F[f.cond]} con ${plazas.get(perfil)} plazas`);
+      if (f.cond === 0) ganadores++;
+      if (f.desempate) desempates++;
+    });
+  });
+  console.log(`  Resultados finales: ${filas.length} filas en ${porPerfil.size} perfiles (GANADOR/A: ${ganadores} · ACCESITARIO/A: ${filas.length - ganadores} · con desempate: ${desempates}), verificadas contra el Excel, las etapas y las plazas`);
+  return {
+    pub: FINAL.pub,
+    data: filas.filter((f) => porKey.has(docKey(f.doc))).map((f) => [porKey.get(docKey(f.doc))[0], f.final, f.orden, f.cond, f.desempate ? 1 : 0]),
+  };
+}
+
 /* ---------- Main ---------- */
 function main() {
   console.log('Generando js/evaluaciones-data.js…');
@@ -597,6 +690,7 @@ function main() {
   const cambios = diffCurricular(data, ecPrevMap);
   const citas = programacion(data, citasExtra);
   entrevista(data);
+  const final = resultadosFinales(data);
 
   if (errores.length) {
     console.error(`\n${errores.length} error(es); no se escribió el archivo:`);
@@ -623,6 +717,8 @@ function main() {
     data,
     // Programación de la entrevista: [dni, panel, índice en dias, inicio, fin] (minutos)
     citas,
+    // Cuadro de méritos: [dni, puntaje final, orden, 0 = GANADOR/A | 1 = ACCESITARIO/A, desempate]
+    final,
   };
 
   const header = `/* Generado por tools/generar-evaluaciones.js — ${new Date().toISOString().slice(0, 10)}. No editar a mano. */\n`;
