@@ -11,6 +11,8 @@
     #res-table tr.is-winning { background-color: rgba(34, 197, 94, .07); }
     #res-table tr.is-winning > td:first-child { box-shadow: inset 3px 0 0 #22c55e; }
     .eval-ganando { font-size: .72em; }
+    #res-table td .eval-bono { font-size: .8rem; font-weight: 700; padding: 2px 8px; font-variant-numeric: tabular-nums; }
+    #res-table td:nth-child(9) small { font-size: .7rem; white-space: nowrap; }
     .eval-etapas { margin-top: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
     @media (max-width: 1100px) { .eval-etapas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     /* Tabla compacta: cabe a lo ancho sin desplazamiento horizontal */
@@ -20,6 +22,13 @@
     #res-table td { padding: 7px 8px; }
     #res-table td:nth-child(2) { font-variant-numeric: tabular-nums; }
     #res-table td:nth-child(3) { min-width: 9rem; }
+    /* Las columnas de datos se ajustan a su contenido y el nombre absorbe el espacio libre,
+       así PT, PA, EC, EP, bonificación y final quedan a la misma distancia */
+    #res-table th:nth-child(3) { width: 100%; }
+    #res-table th:nth-child(4), #res-table td:nth-child(4) { white-space: nowrap; }
+    #res-table th:nth-child(n+5):nth-child(-n+8) { width: 6.4rem; min-width: 6.4rem; }
+    #res-table th:nth-child(n+9):nth-child(-n+10) { width: 5rem; min-width: 5rem; }
+    #res-table td:nth-child(n+5):nth-child(-n+8) .tag { white-space: normal; text-align: center; }
     #res-table td .tag { font-size: .68rem; padding: 1px 7px; line-height: 1.5; }
     #res-table td .eval-ganando { font-size: .66rem; }
     #res-table th:first-child, #res-table td:first-child { padding-left: 12px; }
@@ -47,8 +56,10 @@
       #res-table td:nth-child(3) { grid-column: 1 / -1; order: -2; font-size: .95rem; min-width: 0; }
       #res-table td:nth-child(2) { grid-column: 1 / 3; order: -1; }
       #res-table td:nth-child(4) { grid-column: 3 / -1; order: -1; }
-      #res-table td:nth-child(9) { grid-column: 1 / 3; }
-      #res-table td:nth-child(10) { grid-column: 3 / -1; }
+      #res-table td:nth-child(9) { grid-column: 1; }
+      #res-table td:nth-child(10) { grid-column: 2; }
+      #res-table td:nth-child(11) { grid-column: 3 / -1; }
+      #res-table td:nth-child(n+4) { white-space: normal; }
       #res-table .eval-ep { justify-content: flex-start; }
       #res-table tbody tr:hover { background: var(--surface); }
     }
@@ -56,6 +67,7 @@
       #res-table tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       #res-table td:nth-child(2), #res-table td:nth-child(9) { grid-column: 1; }
       #res-table td:nth-child(4), #res-table td:nth-child(10) { grid-column: 2; }
+      #res-table td:nth-child(11) { grid-column: 1 / -1; }
     }
 
     .eval-cita { white-space: nowrap; font-size: .85rem; line-height: 1.35; }
@@ -288,6 +300,8 @@
           <button class="pill" type="button" data-preset="ep=3">No se presentó a la entrevista</button>
           <button class="pill" type="button" data-preset="ganando=1">Ganadores</button>
           <button class="pill" type="button" data-preset="accesitario=1">Accesitarios</button>
+          <button class="pill" type="button" data-preset="bono=1">Con bonificación</button>
+          <button class="pill" type="button" data-preset="ganando=1&amp;bono=1">Ganadores con bonificación</button>
         </div>
       </div>
     </div>
@@ -309,6 +323,7 @@
         <option value="merito">Cuadro de méritos (perfil y orden)</option>
         <option value="acum-desc">Puntaje final ↓</option>
         <option value="acum-asc">Puntaje final ↑</option>
+        <option value="bono">Bonificación ↓</option>
         <option value="cita">Fecha y hora de entrevista</option>
       </select>
       <label class="sr-only" for="per-page">Filas por página</label>
@@ -347,6 +362,7 @@
           <th class="num" title="Aptitud, 20% del puntaje final">PA<small>Aptitud · 20%</small></th>
           <th class="num" title="Curricular, 30% del puntaje final">EC<small>Curricular · 30%</small></th>
           <th class="num" title="Entrevista, 20% del puntaje final">EP<small>Entrevista · 20%</small></th>
+          <th class="num" title="Puntos sumados por bonificaciones de ley: puntaje final oficial menos la suma ponderada de las etapas. El cuadro de méritos no publica de qué bonificación se trata.">Bonif.<small>puntos</small></th>
           <th class="num" title="Puntaje final del cuadro de méritos oficial, con bonificaciones de ley (puede pasar de 20); para quienes no figuran, suma ponderada de las etapas publicadas">Final<small>oficial</small></th>
           <th>Condición</th>
         </tr>
@@ -474,10 +490,11 @@
 <footer class="site-footer">
   <div class="container">
     Resultados publicados por la Subgerencia de Políticas y Desarrollo Humano — Gerencia de Capital Humano:
-    conocimientos y aptitud el 15 de octubre de 2026, curricular el 17 de noviembre de 2026 (reemplaza a la del 12). El puntaje
-    acumulado suma las etapas publicadas con sus pesos y, en empate, ordena por conocimientos y luego por
-    curricular. Ante cualquier diferencia, prevalece el documento oficial publicado por la Contraloría
-    General de la República.
+    conocimientos y aptitud el 15 de octubre de 2026, curricular el 17 de noviembre de 2026 (reemplaza a la del 12;
+    rectificada por comunicado del 24), entrevista personal el 25 de noviembre y resultados finales el 26 de noviembre de 2026.
+    El puntaje final, el orden de mérito y la condición son los del cuadro de méritos oficial; la columna de bonificación es la
+    diferencia entre ese puntaje y la suma ponderada de las etapas, sin indicar de qué bonificación se trata. Ante cualquier
+    diferencia, prevalece el documento oficial publicado por la Contraloría General de la República.
   </div>
 </footer>
 

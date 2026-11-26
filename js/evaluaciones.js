@@ -185,6 +185,11 @@
       r.accesitario = false;
       const f = porDni.get(r.dni) || porDni.get(String(r.dni).replace(/^0+/, ''));
       if (!f) return;
+      // Puntos ganados por bonificación: puntaje final oficial menos la suma ponderada de las
+      // cuatro etapas. El cuadro no publica qué bonificación recibió cada persona.
+      r.base = r.acumulado;
+      const bono = Math.round((f[1] - r.base) * 100) / 100;
+      r.bono = bono > 0 ? bono : 0;
       r.acumulado = f[1];
       r.puesto = f[2];
       r.ganando = f[3] === 0;
@@ -311,6 +316,7 @@
   // La búsqueda por nombre o DNI queda fuera para no dejar datos personales en enlaces.
   let soloGanando = false;
   let soloAccesitario = false;
+  let soloBono = false;
   const CAMPOS = {
     cond:  condEl,
     pt:    ptCondEl,
@@ -336,6 +342,7 @@
     Object.entries(CAMPOS).forEach(([k, el]) => { if (el.value.trim() !== '') p.set(k, el.value.trim()); });
     if (soloGanando) p.set('ganando', '1');
     if (soloAccesitario) p.set('accesitario', '1');
+    if (soloBono) p.set('bono', '1');
     if (sortEl.value !== 'dni') p.set('sort', sortEl.value);
     return p;
   }
@@ -353,6 +360,7 @@
     Object.entries(CAMPOS).forEach(([k, el]) => { el.value = p.get(k) || ''; });
     soloGanando = p.get('ganando') === '1';
     soloAccesitario = p.get('accesitario') === '1';
+    soloBono = p.get('bono') === '1';
     // El orden solo cambia si la URL lo indica (las consultas rápidas lo conservan)
     const sort = p.get('sort');
     if (sort && [...sortEl.options].some((o) => o.value === sort)) sortEl.value = sort;
@@ -421,6 +429,7 @@
       if (epPanelV !== null && !(r.cita && r.cita.panel === epPanelV)) return false;
       if (soloGanando && !r.ganando) return false;
       if (soloAccesitario && !r.accesitario) return false;
+      if (soloBono && !r.bono) return false;
       return true;
     });
 
@@ -436,6 +445,8 @@
       // no están en los datos)
       filtered = [...filtered].sort((a, b) =>
         (FINAL && a.perfil === b.perfil && a.puesto && b.puesto && a.acumulado === b.acumulado) ? a.puesto - b.puesto : cmpMerito(a, b));
+    } else if (sk === 'bono') {
+      filtered = [...filtered].sort((a, b) => (b.bono || 0) - (a.bono || 0) || cmpMerito(a, b));
     } else if (sk === 'merito') {
       // Cuadro de méritos: por perfil y orden oficial; quienes no figuran, al final
       filtered = [...filtered].sort((a, b) =>
@@ -554,6 +565,9 @@
               ${scoreCell('PA – Aptitud', r.paScore, r.paCond)}
               ${scoreCell('EC – Curricular', r.ecScore, r.ecCond, r.ecFalta)}
               ${calcHtml ? epCalcCell(r, calcHtml, ahora) : scoreCell('EP – Entrevista', r.epScore, r.epCond)}
+              <td class="num" data-label="Bonificación">${r.bono
+                ? `<span class="tag tag--accent eval-bono" title="Suma ponderada de las etapas (${r.base.toFixed(2)}) más ${r.bono.toFixed(2)} puntos por bonificación de ley">+${r.bono.toFixed(2)}</span><br><small class="muted">sobre ${r.base.toFixed(2)}</small>`
+                : '<span class="muted">—</span>'}</td>
               <td class="num" data-label="${FINAL ? 'Puntaje final' : 'Acumulado'}">${r.acumulado !== null ? Number(r.acumulado).toFixed(2) : '<span class="muted">—</span>'}${r.desempate ? '<sup title="Se aplicaron los criterios de desempate (numeral 3.6 de las bases)">(*)</sup>' : ''}</td>
               <td data-label="Condición">${condHtml}${ganadoHtml}</td>
             </tr>`;
