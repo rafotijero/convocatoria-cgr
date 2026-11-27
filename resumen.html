@@ -200,6 +200,34 @@
 
 </main>
 
+<dialog class="drawer" id="detail" aria-labelledby="d-title">
+  <div class="drawer__inner">
+    <header class="drawer__head">
+      <span class="eyebrow" id="d-code"></span>
+      <h2 id="d-title"></h2>
+      <p id="d-org"></p>
+      <div class="drawer__actions">
+        <button class="icon-btn" type="button" id="d-close" aria-label="Cerrar detalle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="drawer__tabs" role="tablist" aria-label="Secciones del perfil">
+      <button type="button" role="tab" data-tab="resumen" aria-selected="true">Resumen</button>
+      <button type="button" role="tab" data-tab="formacion" aria-selected="false">Carreras y cursos</button>
+      <button type="button" role="tab" data-tab="experiencia" aria-selected="false">Experiencia</button>
+      <button type="button" role="tab" data-tab="adicional" aria-selected="false">Detalles adicionales</button>
+      <button type="button" role="tab" data-tab="funciones" aria-selected="false">Funciones</button>
+    </div>
+    <div class="drawer__body" id="d-body" role="tabpanel" tabindex="-1"></div>
+    <footer class="drawer__foot">
+      <button class="btn btn--ghost btn--sm" type="button" id="d-prev">← Anterior</button>
+      <span class="muted num" id="d-pos" style="align-self:center;font-size:.85rem"></span>
+      <button class="btn btn--ghost btn--sm" type="button" id="d-next">Siguiente →</button>
+    </footer>
+  </div>
+</dialog>
+
 <footer class="site-footer">
   <div class="container">
     Elaborado con los resultados de inscripción, evaluaciones de conocimientos y aptitud, evaluación curricular,
@@ -212,6 +240,7 @@
 <script src="js/data.js"></script>
 <script src="js/resultados-data.js"></script>
 <script src="js/evaluaciones-data.js"></script>
+<script src="js/perfil-drawer.js"></script>
 <script src="js/resumen.js"></script>
 </body>
 </html>

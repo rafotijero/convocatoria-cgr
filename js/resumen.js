@@ -190,7 +190,19 @@
     return palabras.some((w) => w.length > 1 && n.includes(w)) ? `<mark>${html}</mark>` : html;
   };
 
-  const celdaPerfil = (p) => `<td class="num"><a class="perfil-link" href="evaluaciones.html?perfil=${p.id}" title="Ver evaluaciones del perfil">${p.id}</a></td>`;
+  const celdaPerfil = (p) => `<td class="num"><a class="perfil-link" href="evaluaciones.html?perfil=${p.id}" data-perfil="${p.id}" title="Ver el perfil del puesto">${p.id}</a></td>`;
+
+  // El código abre el perfil en el panel lateral, sin salir del resumen; Anterior/Siguiente
+  // recorren los perfiles listados con los filtros actuales. Ctrl/⌘ + clic sigue abriendo
+  // las evaluaciones del perfil en otra pestaña.
+  const perfilData = new Map(PD.perfiles.map((p) => [parseInt(p.id, 10), p]));
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('.perfil-link[data-perfil]');
+    if (!a || !window.CPM_PERFIL_DRAWER || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    const contexto = filtrados().map((p) => perfilData.get(p.id)).filter(Boolean);
+    window.CPM_PERFIL_DRAWER.open(a.dataset.perfil, contexto);
+  });
   const celdaPuesto = (p) => `<td class="rsm-puesto">${esc(p.puesto)}<small class="muted">${esc(p.organo)} · ${esc(p.ambito)}</small>` +
     `<small class="muted">Carreras: ${esc(p.carrerasCorto)}</small></td>`;
   const estadoTag = (p) => p.estado === 'desierto' ? '<span class="tag tag--danger">Desierto</span>'
