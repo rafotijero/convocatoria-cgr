@@ -15,8 +15,8 @@
     @media (max-width: 560px) { .rsm-charts .hbar { grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) 2.5rem; } }
     .rsm-charts .hbar.is-active { background: var(--accent-soft); }
     .rsm-tabs { margin-top: 24px; }
-    .rsm-filters { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.2fr) minmax(0, 1.2fr) auto; gap: 12px 16px; align-items: end; padding: 16px 18px; margin-top: 12px; }
-    @media (max-width: 860px) { .rsm-filters { grid-template-columns: 1fr 1fr; } }
+    .rsm-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1.2fr)) auto; gap: 12px 16px; align-items: end; padding: 16px 18px; margin-top: 12px; }
+    @media (max-width: 1000px) { .rsm-filters { grid-template-columns: 1fr 1fr; } }
     @media (max-width: 560px) { .rsm-filters { grid-template-columns: 1fr; } }
     .rsm-puesto { min-width: 15rem; }
     .rsm-puesto small { display: block; margin-top: 2px; }
@@ -115,6 +115,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <input class="input" id="f-buscar" type="search" placeholder="Código o nombre del perfil, ganador o DNI…" autocomplete="off">
       </div>
+    </div>
+    <div class="field">
+      <label class="field__label" for="f-carrera">Carrera</label>
+      <input class="input" id="f-carrera" list="dl-carreras" placeholder="Ej. Derecho, Contabilidad…" autocomplete="off" enterkeyhint="done">
+      <datalist id="dl-carreras"></datalist>
     </div>
     <div class="field">
       <label class="field__label" for="f-ambito">Ámbito</label>

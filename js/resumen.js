@@ -27,10 +27,17 @@
   const SIN_POSTULANTES = 'Sin postulantes';
 
   /* ---------- Perfiles ---------- */
+  // Mismo texto de carreras que el dashboard de perfiles
+  function carrerasCorto(p) {
+    if (!p.carreras.length) return p.nivel === 'Secundaria' ? 'No requiere carrera · Secundaria completa' : p.carrerasTexto || '—';
+    const txt = p.carreras.join(', ');
+    return p.carrerasAfines ? `${txt} u otras afines` : txt;
+  }
   const perfiles = new Map();
   PD.perfiles.forEach((p) => {
     perfiles.set(parseInt(p.id, 10), {
       id: parseInt(p.id, 10), puesto: p.puesto, organo: p.organo, ambito: p.ambito,
+      carreras: p.carreras, carrerasCorto: carrerasCorto(p), _car: norm(p.carreras.join(' | ') + ' ' + p.carrerasTexto),
       plazas: p.posiciones, ins: 0, apt: 0, pt: 0, pa: 0, ec: 0, ep: 0, ganadores: [], acc: 0,
     });
   });
@@ -81,30 +88,36 @@
     p._q = norm(`${p.id} ${p.puesto} ${p.organo} ${p.ganadores.map((g) => `${g.nombre} ${g.dni}`).join(' ')}`);
   });
 
-  /* ---------- KPIs ---------- */
+  /* ---------- KPIs (de los perfiles de la carrera elegida, o de todos) ---------- */
   const sum = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
-  const tPlazas = sum(lista, (p) => p.plazas);
-  const tGan = sum(lista, (p) => p.cubiertas);
-  const tDes = sum(lista, (p) => p.desiertas);
-  const tAcc = sum(lista, (p) => p.acc);
-  const nDes = lista.filter((p) => p.estado === 'desierto').length;
-  const nPar = lista.filter((p) => p.estado === 'parcial').length;
-  const tIns = R.data.length;
-
-  $('k-plazas').textContent = fmt(tPlazas);
-  $('k-plazas-hint').textContent = `en ${fmt(lista.length)} perfiles · ${fmt(tIns)} inscritos`;
-  $('k-gan').textContent = fmt(tGan);
-  $('k-gan-hint').textContent = `${pct(tGan, tPlazas)} de las plazas cubiertas`;
-  $('k-des').textContent = fmt(tDes);
-  $('k-des-hint').textContent = `${fmt(nDes)} perfiles desiertos y ${fmt(nPar)} parcialmente`;
-  $('k-acc').textContent = fmt(tAcc);
-  $('k-acc-hint').textContent = `en ${fmt(lista.filter((p) => p.acc).length)} perfiles, por si alguna plaza queda libre`;
+  function renderKpis(base) {
+    const tPlazas = sum(base, (p) => p.plazas);
+    const tGan = sum(base, (p) => p.cubiertas);
+    const nDes = base.filter((p) => p.estado === 'desierto').length;
+    const nPar = base.filter((p) => p.estado === 'parcial').length;
+    $('k-plazas').textContent = fmt(tPlazas);
+    $('k-plazas-hint').textContent = `en ${fmt(base.length)} perfiles · ${fmt(sum(base, (p) => p.ins))} inscritos`;
+    $('k-gan').textContent = fmt(tGan);
+    $('k-gan-hint').textContent = `${pct(tGan, tPlazas)} de las plazas cubiertas`;
+    $('k-des').textContent = fmt(sum(base, (p) => p.desiertas));
+    $('k-des-hint').textContent = `${fmt(nDes)} perfiles desiertos y ${fmt(nPar)} parcialmente`;
+    $('k-acc').textContent = fmt(sum(base, (p) => p.acc));
+    $('k-acc-hint').textContent = `en ${fmt(base.filter((p) => p.acc).length)} perfiles, por si alguna plaza queda libre`;
+  }
   $('pub-info').textContent =
     `Resultados finales publicados el ${E.final.pub}: quiénes ganaron en cada perfil y qué plazas quedaron desiertas, ` +
     'con el recorrido de los postulantes desde la inscripción · CPM N° 06-2026-CG';
 
   /* ---------- Filtros ---------- */
-  const buscarEl = $('f-buscar'), ambitoEl = $('f-ambito'), estadoEl = $('f-estado'), etapaEl = $('f-etapa');
+  const buscarEl = $('f-buscar'), carreraEl = $('f-carrera'), ambitoEl = $('f-ambito'), estadoEl = $('f-estado'), etapaEl = $('f-etapa');
+  const collator = new Intl.Collator('es', { sensitivity: 'base' });
+  const carreras = [...new Set(lista.flatMap((p) => p.carreras))].sort(collator.compare);
+  $('dl-carreras').innerHTML = carreras.map((c) => `<option value="${esc(c)}">`).join('');
+  // Perfiles de la carrera elegida (coincidencia parcial, como en el dashboard)
+  const deCarrera = () => {
+    const c = norm(carreraEl.value);
+    return c ? lista.filter((p) => p._car.includes(c)) : lista;
+  };
   const ambitos = [...new Set(lista.map((p) => p.ambito))].sort((a, b) => a.localeCompare(b, 'es'));
   ambitos.forEach((a) => ambitoEl.add(new Option(a, a)));
   const etapasUsadas = [SIN_POSTULANTES, ...ETAPAS.map((e) => e.label), 'Cuadro de méritos']
@@ -118,7 +131,7 @@
   function filtrados() {
     const q = norm(buscarEl.value);
     const palabras = q ? q.split(/\s+/) : [];
-    return lista.filter((p) =>
+    return deCarrera().filter((p) =>
       (!ambitoEl.value || p.ambito === ambitoEl.value) &&
       (tab === 'desiertos' ? p.desiertas > 0 && (!etapaEl.value || p.etapa === etapaEl.value)
                            : !estadoEl.value || p.estado === estadoEl.value) &&
@@ -137,10 +150,10 @@
     el.onclick = (e) => { const b = e.target.closest('.hbar'); if (b) onClick(b.dataset.v); };
   }
 
-  function renderCharts() {
+  function renderCharts(base) {
     const porEtapa = new Map(etapasUsadas.map((l) => [l, { n: 0, perfiles: 0 }]));
     const porAmbito = new Map();
-    lista.forEach((p) => {
+    base.forEach((p) => {
       if (!p.desiertas) return;
       const e = porEtapa.get(p.etapa); e.n += p.desiertas; e.perfiles++;
       porAmbito.set(p.ambito, (porAmbito.get(p.ambito) || 0) + p.desiertas);
@@ -178,7 +191,8 @@
   };
 
   const celdaPerfil = (p) => `<td class="num"><a class="perfil-link" href="evaluaciones.html?perfil=${p.id}" title="Ver evaluaciones del perfil">${p.id}</a></td>`;
-  const celdaPuesto = (p) => `<td class="rsm-puesto">${esc(p.puesto)}<small class="muted">${esc(p.organo)} · ${esc(p.ambito)}</small></td>`;
+  const celdaPuesto = (p) => `<td class="rsm-puesto">${esc(p.puesto)}<small class="muted">${esc(p.organo)} · ${esc(p.ambito)}</small>` +
+    `<small class="muted">Carreras: ${esc(p.carrerasCorto)}</small></td>`;
   const estadoTag = (p) => p.estado === 'desierto' ? '<span class="tag tag--danger">Desierto</span>'
     : p.estado === 'parcial' ? `<span class="tag tag--warn">${p.desiertas} ${p.desiertas === 1 ? 'plaza desierta' : 'plazas desiertas'}</span>` : '';
 
@@ -268,6 +282,7 @@
     const p = new URLSearchParams();
     if (tab !== 'ganadores') p.set('vista', tab);
     if (buscarEl.value.trim()) p.set('q', buscarEl.value.trim());
+    if (carreraEl.value.trim()) p.set('carrera', carreraEl.value.trim());
     if (ambitoEl.value) p.set('ambito', ambitoEl.value);
     if (tab === 'ganadores' && estadoEl.value) p.set('estado', estadoEl.value);
     if (tab === 'desiertos' && etapaEl.value) p.set('etapa', etapaEl.value);
@@ -283,15 +298,17 @@
     $('fld-etapa').hidden = tab !== 'desiertos';
     const rows = filtrados();
     if (tab === 'ganadores') renderGanadores(rows); else { renderDesiertos(rows); renderPager(0); }
-    renderCharts();
+    const base = deCarrera();
+    renderKpis(base);
+    renderCharts(base);
     syncUrl();
   }
 
   let timer;
-  buscarEl.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { page = 1; render(); }, 200); });
+  [buscarEl, carreraEl].forEach((el) => el.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { page = 1; render(); }, 200); }));
   [ambitoEl, estadoEl, etapaEl].forEach((el) => el.addEventListener('change', () => { page = 1; render(); }));
   $('limpiar').addEventListener('click', () => {
-    buscarEl.value = ''; ambitoEl.value = ''; estadoEl.value = ''; etapaEl.value = '';
+    buscarEl.value = ''; carreraEl.value = ''; ambitoEl.value = ''; estadoEl.value = ''; etapaEl.value = '';
     page = 1;
     render();
   });
@@ -300,6 +317,7 @@
   const qs = new URLSearchParams(location.search);
   if (qs.get('vista') === 'desiertos') tab = 'desiertos';
   if (qs.get('q')) buscarEl.value = qs.get('q');
+  if (qs.get('carrera')) carreraEl.value = qs.get('carrera');
   if (ambitos.includes(qs.get('ambito'))) ambitoEl.value = qs.get('ambito');
   if (['completo', 'parcial', 'desierto'].includes(qs.get('estado'))) estadoEl.value = qs.get('estado');
   if (etapasUsadas.includes(qs.get('etapa'))) etapaEl.value = qs.get('etapa');
