@@ -33,6 +33,7 @@
     .rsm-embudo i { color: var(--muted); font-style: normal; padding: 0 2px; }
     .res-table tr.is-desierto > td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
     .res-table tr.is-parcial > td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+    .rsm-ver { white-space: nowrap; }
     .rsm-nota { margin-top: 24px; font-size: .88rem; }
     .rsm-nota ul { margin: 6px 0 0; padding-left: 1.2em; }
   </style>
@@ -155,6 +156,7 @@
             <th class="num">Plazas</th>
             <th>Ganadores <small class="muted">(orden de mérito · puntaje final)</small></th>
             <th class="num" title="Accesitarios del cuadro de méritos">Accesitarios</th>
+            <th>Perfil del puesto</th>
           </tr>
         </thead>
         <tbody id="t-gan"></tbody>
@@ -178,6 +180,7 @@
             <th class="num">Desiertas</th>
             <th title="Postulantes que siguen en carrera después de cada etapa">Inscritos → Aptos → PT → PA → EC → EP</th>
             <th>Quedó desierto en</th>
+            <th>Perfil del puesto</th>
           </tr>
         </thead>
         <tbody id="t-des"></tbody>
