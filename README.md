@@ -6,7 +6,7 @@ Sitio estático para consultar el **Concurso Público de Méritos N° 06-2026-CG
 - **`dashboard.html` — Perfiles:** filtros por lugar de prestación, región, órgano, escala remunerativa (con monto), carrera, nivel educativo y experiencia; gráficos, resultados paginados y detalle de cada perfil (carreras, cursos, experiencia, requisitos adicionales, lugares y funciones).
 - **`resultados.html` — Inscripción:** resultados de la inscripción virtual con filtros por perfil, nombre o DNI, condición, sede, local y aula de evaluación; al filtrar un local muestra su dirección de ingreso, fecha y horario.
 - **`evaluaciones.html` — Evaluaciones:** puntajes y condición en conocimientos (PT), aptitud (PA) y curricular (EC), con puntaje acumulado, filtros por etapa y los postulantes que van ganando según las plazas de cada perfil. Con los resultados finales del 26 de noviembre, la columna Final muestra el puntaje oficial (con bonificaciones de ley y la marca (*) de desempate) y la condición GANADOR/A o ACCESITARIO/A con su orden de mérito; la columna Bonif. muestra los puntos que sumó cada persona por bonificaciones de ley sobre la suma ponderada de sus etapas (el cuadro no publica de qué bonificación se trata y la página no lo deduce), con orden por bonificación (`sort=bono`); hay consultas rápidas de ganadores, accesitarios y con bonificación (`?ganando=1`, `?accesitario=1`, `?bono=1`) y orden por cuadro de méritos (`sort=merito`). Con la entrevista personal (EP) publicada el 25 de noviembre, la columna EP muestra su puntaje y condición, el acumulado pasa a ser el puntaje final sobre 20 (antes de bonificaciones, que no se publican) y se marca a quienes **ganan plaza** según las plazas del perfil; hay filtros por condición y puntaje en EP (`?ep=`, `?epmin=`, `?epmax=`), además de día y panel de la cita (`?epdia=`, `?eppanel=`). Mientras la entrevista no estaba publicada, cada finalista tenía un botón de **calculadora** (puesto, nota necesaria y probabilidad de ganar); se oculta al publicarse los resultados.
-- **`cambios.html` — Cambios:** compara la publicación curricular del 12 de noviembre (reemplazada) con la del 17: transiciones de condición, perfiles con más impacto, favorecidos y perjudicados (incluidos quienes entran o salen de los puestos ganadores por cambios de otros) y el ranking antes y ahora de cada perfil. Acepta `?vista=favorecidos|perjudicados`, `?perfil=` y `?puestos=1`.
+- **`resumen.html` — Resumen:** resumen final por perfil con los resultados del 26 de noviembre: plazas convocadas, ganadores, plazas desiertas y accesitarios; la vista **Ganadores por perfil** lista a quienes ganaron en cada perfil con su orden de mérito y puntaje final, y la vista **Desiertos** muestra los perfiles sin ganadores o con menos ganadores que plazas, con el embudo de postulantes (inscritos, aptos, PT, PA, EC y EP) y la etapa en que se quedaron sin postulantes suficientes. Acepta `?vista=desiertos`, `?q=`, `?ambito=`, `?estado=completo|parcial|desierto` y `?etapa=`.
 
 ## Uso
 
@@ -29,8 +29,8 @@ css/styles.css        Estilos compartidos (tema claro/oscuro)
 js/data.js            Datos de los perfiles (generado)
 js/dashboard.js       Lógica del dashboard
 js/bases.js           Cuenta regresiva, cronograma e índice
-js/merito.js          Acumulado, desempate y puestos ganadores (evaluaciones y cambios)
-js/cambios.js         Reporte de cambios de la evaluación curricular
+js/merito.js          Acumulado, desempate y puestos ganadores (evaluaciones)
+js/resumen.js         Resumen final: ganadores y desiertos por perfil
 js/calculadora.js     Calculadora de posibilidades (panel en evaluaciones)
 js/tema.js            Selector de tema
 tools/generar-datos.js  Genera js/data.js a partir de los anexos
@@ -76,7 +76,6 @@ Por último lee los resultados de la entrevista (`archivos/06 Entrevistas/CPM_06
 
 Finalmente lee el cuadro de méritos (`archivos/07 Resultado final/CPM_06_2026_Resultados_Finales.md`, del 26 de noviembre), lo verifica fila por fila contra su `.xlsx` y exige que las notas de cada etapa sean las publicadas, que figuren todos los CALIFICA de la entrevista, que el puntaje final esté entre la suma ponderada y el máximo posible con bonificaciones, y que en cada perfil el orden sea correlativo y ganen los primeros según sus plazas. Se guarda en `CPM_EVAL.final`.
 
-El mismo script lee la publicación curricular anterior (`CPM_06_2026_Resultados_Evaluacion_Curricular_CORREGIDO.md` y `.xlsx`, del 12 de noviembre), la valida igual y escribe en `js/cambios-ec-data.js` solo el resultado anterior de quienes cambiaron; `cambios.html` reconstruye con eso la publicación anterior.
 
 En las páginas, el puntaje acumulado suma las etapas publicadas con sus pesos (redondeado a dos decimales) y, en empate, ordena por conocimientos, luego por curricular y luego por entrevista, según los criterios de desempate de las bases.
 

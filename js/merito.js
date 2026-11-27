@@ -1,4 +1,4 @@
-/* Reglas de mérito compartidas (evaluaciones y reporte de cambios) — CPM N° 06-2026-CG */
+/* Reglas de mérito compartidas (evaluaciones) — CPM N° 06-2026-CG */
 (function () {
   'use strict';
 

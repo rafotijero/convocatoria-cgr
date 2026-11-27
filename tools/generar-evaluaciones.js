@@ -7,8 +7,6 @@
  * Fuentes (archivos/05 Curricular/Corregido: incluyen la última página, escaneada, de cada PDF):
  *   - CPM_06_2026_Resultados_Eva_Curricular_CORREGIDO.md         (EC, peso 30%) — todos los evaluados (versión del 17/11)
  *   - CPM_06_2026_Resultados_Eva_Curricular_CORREGIDO.xlsx       todas las filas; se usa para validar
- *   - CPM_06_2026_Resultados_Evaluacion_Curricular_CORREGIDO.md/.xlsx  publicación del 12/11, reemplazada;
- *     solo para js/cambios-ec-data.js (reporte de cambios)
  * Fuentes (archivos/06 Entrevistas):
  *   - CPM_06_2026_Programacion_Entrevista_Personal.md     panel, fecha y hora de cada finalista
  *   - CPM_06_2026_Programacion_Entrevista_Personal.xlsx   todas las filas; se usa para validar
@@ -34,7 +32,6 @@ const DIR_04 = path.join(ROOT, 'archivos', '04 Evaluaciones');
 const OUT    = path.join(ROOT, 'js', 'evaluaciones-data.js');
 const XLSX   = path.join(DIR_04, 'CPM_06_2026_Califica_Conocimientos_Aptitud.xlsx');
 const DIR_05  = path.join(ROOT, 'archivos', '05 Curricular', 'Corregido');
-const OUT_CAMBIOS = path.join(ROOT, 'js', 'cambios-ec-data.js');
 const DIR_06  = path.join(ROOT, 'archivos', '06 Entrevistas');
 const PROG = {
   file: path.join(DIR_06, 'CPM_06_2026_Programacion_Entrevista_Personal.md'),
@@ -80,14 +77,6 @@ const ETAPAS = {
     curricular: true,
     label: 'EC – Curricular',
     pub: '17 de noviembre de 2026, rectificada el 24 de noviembre',
-  },
-  // Publicación anterior, reemplazada por la del 17/11. Solo se usa para el reporte de cambios.
-  ecPrev: {
-    file: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular_CORREGIDO.md'),
-    xlsx: path.join(DIR_05, 'CPM_06_2026_Resultados_Evaluacion_Curricular_CORREGIDO.xlsx'),
-    curricular: true,
-    label: 'EC – Curricular (12/11, reemplazada)',
-    pub: '12 de noviembre de 2026',
   },
 };
 
@@ -318,32 +307,6 @@ function validarExcelEC(key, byDni) {
     if ((md.nombre || '') !== (r.D || '')) errores.push(`${donde}: nombre "${r.D}" ≠ "${md.nombre}"`);
   }
   console.log(`  ${cfg.label}: ${rows.length} filas verificadas contra el Excel`);
-}
-
-/* ---------- Diferencias con la publicación curricular anterior ---------- */
-// Devuelve [dni, ec_score_anterior, ec_cond_anterior] solo de quienes cambiaron, con el
-// documento tal como figura en data. null en la condición = no figuraba.
-function diffCurricular(data, prevMap) {
-  const prevPorKey = new Map([...prevMap.values()].map((r) => [docKey(r.dni), r]));
-  const usados = new Set();
-  const cambios = [];
-
-  for (const r of data) {
-    const key  = docKey(r[0]);
-    const prev = prevPorKey.get(key) || null;
-    if (prev) {
-      usados.add(key);
-      if (prev.perfil !== r[2]) errores.push(`ecPrev: ${prev.dni} perfil ${prev.perfil} ≠ ${r[2]}`);
-    }
-    const pScore = prev ? prev.puntaje : null;
-    const pCond  = prev ? prev.cond    : null;
-    if (pScore !== r[7] || pCond !== r[8]) cambios.push([r[0], pScore, pCond]);
-  }
-  for (const [key, prev] of prevPorKey) {
-    if (!usados.has(key)) errores.push(`ecPrev: ${prev.dni} no figura en conocimientos ni aptitud`);
-  }
-  console.log(`  Cambios respecto de la publicación del ${ETAPAS.ecPrev.pub}: ${cambios.length}`);
-  return cambios;
 }
 
 /* ---------- Combinar las etapas ---------- */
@@ -679,15 +642,12 @@ function main() {
   const ptMap = parseStage('pt');
   const paMap = parseStage('pa');
   const ecMap = parseStage('ec');
-  const ecPrevMap = parseStage('ecPrev');
   validarExcel('pt', ptMap);
   validarExcel('pa', paMap);
   validarExcelEC('ec', ecMap);
   const citasExtra = rectificacion(ecMap);
-  validarExcelEC('ecPrev', ecPrevMap);
 
   const data = combine(ptMap, paMap, ecMap);
-  const cambios = diffCurricular(data, ecPrevMap);
   const citas = programacion(data, citasExtra);
   entrevista(data);
   const final = resultadosFinales(data);
@@ -727,12 +687,6 @@ function main() {
 
   const kb = (Buffer.byteLength(body) / 1024).toFixed(0);
   console.log(`Escrito: js/evaluaciones-data.js (${kb} KB, ${data.length} registros)`);
-
-  // Reporte de cambios: la página reconstruye la publicación anterior reemplazando
-  // la curricular de estos registros en CPM_EVAL.
-  const bodyCambios = `window.CPM_EC_PREV = ${JSON.stringify({ pub: ETAPAS.ecPrev.pub, cambios })};\n`;
-  fs.writeFileSync(OUT_CAMBIOS, header + bodyCambios, 'utf8');
-  console.log(`Escrito: js/cambios-ec-data.js (${cambios.length} cambios)`);
 }
 
 main();
